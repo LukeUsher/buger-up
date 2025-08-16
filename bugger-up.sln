@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.35201.131
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bugger-up", "E:\GamePorting\bugger-up\bugger-up.vcxproj", "{6FCED408-75B2-4EF9-9E5F-3EC58B19249B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6FCED408-75B2-4EF9-9E5F-3EC58B19249B}.Debug|x86.ActiveCfg = Debug|Win32
+		{6FCED408-75B2-4EF9-9E5F-3EC58B19249B}.Debug|x86.Build.0 = Debug|Win32
+		{6FCED408-75B2-4EF9-9E5F-3EC58B19249B}.Release|x86.ActiveCfg = Release|Win32
+		{6FCED408-75B2-4EF9-9E5F-3EC58B19249B}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D766E4B4-286A-400F-AEF0-4FE4441221C5}
+	EndGlobalSection
+EndGlobal

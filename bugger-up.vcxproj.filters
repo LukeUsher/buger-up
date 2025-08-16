@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="game-manager.cpp" />
+    <ClCompile Include="patch-engine.cpp" />
+    <ClCompile Include="thirdparty\subhook\subhook.c">
+      <Filter>thirdparty</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="game-manager.h" />
+    <ClInclude Include="patch-engine.h" />
+    <ClInclude Include="pragma\ddraw.h">
+      <Filter>pragma</Filter>
+    </ClInclude>
+    <ClInclude Include="pragma\winmm.h">
+      <Filter>pragma</Filter>
+    </ClInclude>
+    <ClInclude Include="pragma\dsound.h">
+      <Filter>pragma</Filter>
+    </ClInclude>
+    <ClInclude Include="pragma\ws2_32.h">
+      <Filter>pragma</Filter>
+    </ClInclude>
+    <ClInclude Include="thirdparty\xxhash32.h">
+      <Filter>thirdparty</Filter>
+    </ClInclude>
+    <ClInclude Include="games\games.h">
+      <Filter>games</Filter>
+    </ClInclude>
+    <ClInclude Include="games\bug.h">
+      <Filter>games</Filter>
+    </ClInclude>
+    <ClInclude Include="games\bug-too.h">
+      <Filter>games</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="thirdparty">
+      <UniqueIdentifier>{5c20ebac-2c53-4091-a126-9e17dbcfd06b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pragma">
+      <UniqueIdentifier>{a070592e-db28-4f88-b024-fb9089ecd136}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="games">
+      <UniqueIdentifier>{c1abc6b2-e37b-4d6e-8ee7-da2325b6fbfa}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
