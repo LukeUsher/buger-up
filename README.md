@@ -54,8 +54,6 @@
 
 ## Bug Too! (1996)
 
-> **Note:** Support for *Bug Too!* is planned but not yet supported, but these install instructions are likely to be final
-
 ### Requirements
 
 - Original *Bug Too!* disc (U.S. retail release tested).  
