@@ -84,7 +84,7 @@ The original SETUP.EXE does not function on Modern Windows, so the game will nee
    - Copy `winmm.dll` from the patch ZIP into the game installation directory.
 
 4. **Play the game**
-   - Start the game with BUGTOO!.EXE; on first run, you will be asked if you wish to create desktop and/or start menu shortcuts.
+   - Start the game with BUGTOO!.EXE
    - After setup, the game will run without the disc.  
    - If audio tracks are present, CD music will play; custom soundtracks are fully supported.
 ---
