@@ -30,8 +30,8 @@ struct Bug : Game
 		patchEngine.PatchBinary(0x00411569, { 0x90, 0x90, 0x90, 0x90, 0x90 }); //nop padding
 
 		//Hook legacy joypad apis
-		patchEngine.PatchImportedFunction("winmm.dll", "joyGetDevCapsA", joyGetDevCapsA_Hook);
-		patchEngine.PatchImportedFunction("winmm.dll", "joyGetPosEx", joyGetPosEx_Hook);
+		patchEngine.PatchImportedFunction("winmm.dll", "joyGetDevCapsA", WinmmJoy::joyGetDevCapsA);
+		patchEngine.PatchImportedFunction("winmm.dll", "joyGetPosEx", WinmmJoy::joyGetPosEx);
 
 		//NoCD:Hook IsCorrectDiscInserted to always return true
 		patchEngine.PatchFunction("IsCorrectDiscInserted", 0x00411300, IsCorrectDiscInserted_Hook);
@@ -119,115 +119,6 @@ struct Bug : Game
 		for (int y = 0; y < copyH; ++y) {
 			memcpy(dst + y * pitch, srcStart + y * fmvW, copyW);
 		}
-	}
-
-	static inline DWORD ThumbToJoyRange(LONG val) {
-		return (DWORD)((int)val + 32768);
-	}
-
-	static inline DWORD MapButtons(WORD xb) {
-		DWORD out = 0;
-		if (xb & XINPUT_GAMEPAD_A) out |= (1u << 0);
-		if (xb & XINPUT_GAMEPAD_B) out |= (1u << 1);
-		if (xb & XINPUT_GAMEPAD_X) out |= (1u << 2);
-		if (xb & XINPUT_GAMEPAD_Y) out |= (1u << 3);
-		if (xb & XINPUT_GAMEPAD_LEFT_SHOULDER)  out |= (1u << 4);
-		if (xb & XINPUT_GAMEPAD_RIGHT_SHOULDER) out |= (1u << 5);
-		if (xb & XINPUT_GAMEPAD_START) out |= (1u << 6);
-		if (xb & XINPUT_GAMEPAD_BACK)  out |= (1u << 7);
-		if (xb & XINPUT_GAMEPAD_DPAD_UP)    out |= (1u << 8);
-		if (xb & XINPUT_GAMEPAD_DPAD_DOWN)  out |= (1u << 9);
-		if (xb & XINPUT_GAMEPAD_DPAD_LEFT)  out |= (1u << 10);
-		if (xb & XINPUT_GAMEPAD_DPAD_RIGHT) out |= (1u << 11);
-		if (xb & XINPUT_GAMEPAD_LEFT_THUMB)  out |= (1u << 12);
-		if (xb & XINPUT_GAMEPAD_RIGHT_THUMB) out |= (1u << 13);
-		return out;
-	}
-
-	static auto __stdcall joyGetDevCapsA_Hook(UINT_PTR uJoyID, LPJOYCAPSA pjc, UINT cbjc) -> MMRESULT {
-		if (!pjc || cbjc < sizeof(JOYCAPSA)) return MMSYSERR_INVALPARAM;
-
-		if (uJoyID >= 4) return MMSYSERR_NODRIVER;
-
-		ZeroMemory(pjc, cbjc);
-		pjc->wMid = 0;
-		pjc->wPid = 0;
-		strncpy_s(pjc->szPname, "XInput Controller", MAXPNAMELEN);
-		pjc->wXmin = 0;    pjc->wXmax = 0xFFFF;
-		pjc->wYmin = 0;    pjc->wYmax = 0xFFFF;
-		pjc->wZmin = 0;    pjc->wZmax = 0xFFFF;
-		pjc->wNumButtons = 14;
-		pjc->wPeriodMin = 0;
-		pjc->wPeriodMax = 0;
-
-		return JOYERR_NOERROR;
-	}
-
-	static auto __stdcall joyGetPosEx_Hook(UINT uJoyID, LPJOYINFOEX pji) -> MMRESULT {
-		if (!pji || pji->dwSize < sizeof(JOYINFOEX)) return MMSYSERR_INVALPARAM;
-
-		if (uJoyID >= 4) return MMSYSERR_NODRIVER;
-
-		XINPUT_STATE xi{};
-		DWORD res = XInputGetState(uJoyID, &xi);
-
-		pji->dwSize = sizeof(JOYINFOEX);
-
-		if (res == ERROR_SUCCESS) {
-			LONG lx = xi.Gamepad.sThumbLX;
-			LONG ly = xi.Gamepad.sThumbLY;
-
-			if (xi.Gamepad.wButtons & (XINPUT_GAMEPAD_DPAD_LEFT | XINPUT_GAMEPAD_DPAD_RIGHT | XINPUT_GAMEPAD_DPAD_UP | XINPUT_GAMEPAD_DPAD_DOWN)) {
-				lx = 0;
-				ly = 0;
-				if (xi.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT)  lx = -32768;
-				if (xi.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT) lx = 32767;
-				if (xi.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP)    ly = 32767;
-				if (xi.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN)  ly = -32768;
-			}
-
-			if (pji->dwFlags & JOY_RETURNX) pji->dwXpos = ThumbToJoyRange(lx);
-			if (pji->dwFlags & JOY_RETURNY)	pji->dwYpos = ThumbToJoyRange(-ly);
-			if (pji->dwFlags & JOY_RETURNZ)	pji->dwZpos = xi.Gamepad.bRightTrigger * 257;
-			if (pji->dwFlags & JOY_RETURNR)	pji->dwRpos = xi.Gamepad.bLeftTrigger * 257;
-			if (pji->dwFlags & JOY_RETURNBUTTONS) {
-				pji->dwButtons = MapButtons(xi.Gamepad.wButtons);
-				pji->dwButtonNumber = 0;
-				for (int i = 0; i < 32; ++i) {
-					if (pji->dwButtons & (1u << i)) {
-						pji->dwButtonNumber = i + 1;
-						break;
-					}
-				}
-			}
-
-			if (pji->dwFlags & JOY_RETURNPOV) {
-				WORD b = xi.Gamepad.wButtons;
-				if (b & XINPUT_GAMEPAD_DPAD_UP) {
-					if (b & XINPUT_GAMEPAD_DPAD_RIGHT) pji->dwPOV = 4500;
-					else if (b & XINPUT_GAMEPAD_DPAD_LEFT) pji->dwPOV = 31500;
-					else pji->dwPOV = 0;
-				}
-				else if (b & XINPUT_GAMEPAD_DPAD_RIGHT) pji->dwPOV = 9000;
-				else if (b & XINPUT_GAMEPAD_DPAD_DOWN) {
-					if (b & XINPUT_GAMEPAD_DPAD_RIGHT) pji->dwPOV = 13500;
-					else if (b & XINPUT_GAMEPAD_DPAD_LEFT) pji->dwPOV = 22500;
-					else pji->dwPOV = 18000;
-				}
-				else if (b & XINPUT_GAMEPAD_DPAD_LEFT) pji->dwPOV = 27000;
-				else pji->dwPOV = JOY_POVCENTERED;
-			}
-		} else {
-			pji->dwXpos = 0x8000;
-			pji->dwYpos = 0x8000;
-			pji->dwZpos = 0;
-			pji->dwRpos = 0;
-			pji->dwButtons = 0;
-			pji->dwButtonNumber = 0;
-			pji->dwPOV = JOY_POVCENTERED;
-		}
-
-		return JOYERR_NOERROR;
 	}
 
 	static auto __cdecl IsCorrectDiscInserted_Hook() -> int {

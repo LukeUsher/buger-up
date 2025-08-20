@@ -99,6 +99,7 @@
     <ClCompile Include="game-manager.cpp" />
     <ClCompile Include="patch-engine.cpp" />
     <ClCompile Include="thirdparty\subhook\subhook.c" />
+    <ClCompile Include="winmm-joy.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cd-player.hpp" />
@@ -113,6 +114,7 @@
     <ClInclude Include="pragma\ws2_32.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="thirdparty\xxhash32.h" />
+    <ClInclude Include="winmm-joy.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
