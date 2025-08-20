@@ -18,6 +18,7 @@
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "Shlwapi.lib")
 
+#include "cd-player.hpp"
 #include "games/games.h"
 
 class GameManager {

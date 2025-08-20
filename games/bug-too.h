@@ -28,19 +28,6 @@ struct BugToo : Game
 
 	inline static HWND _hwnd = nullptr;
 
-	//Audio Stuff
-	inline static bool g_Playing = false;
-	inline static bool g_Paused = false;
-	inline static bool g_Loop = false;
-	inline static int g_CurrentTrack = -1;
-	inline static std::vector<std::string> g_TrackFiles;
-	inline static std::thread g_PlaybackThread;
-	inline static DWORD g_StartTrack = 0;
-	inline static DWORD g_EndTrack = 0;
-	inline static DWORD g_Position = 0;
-	inline static HWAVEOUT g_hWaveOut = nullptr;
-	inline static WAVEHDR g_WaveHdr = { 0 };
-
 	auto applyPatches(std::string hash) -> bool override {
 		EnsureDwmMitigationAndRelaunch();
 		_GameDirectory = GetCurrentGameInstallDirectory();
@@ -455,117 +442,30 @@ struct BugToo : Game
 	}
 
 	// Audio hooks
-	static auto StopPlayback() -> void {
-		g_Playing = false;
-		g_Paused = false;
-		if (g_PlaybackThread.joinable()) g_PlaybackThread.join();
-	}
-
-	static auto PlaybackThreadFunc(int trackNumber) -> void {
-		while (true) {
-			if (trackNumber < 0 || trackNumber >= (int)g_TrackFiles.size()) break;
-
-			std::ifstream file(g_TrackFiles[trackNumber], std::ios::binary | std::ios::ate);
-			if (!file.is_open()) break;
-
-			auto size = file.tellg();
-			file.seekg(0, std::ios::beg);
-			std::vector<char> buffer(size);
-			file.read(buffer.data(), size);
-			file.close();
-
-			WAVEFORMATEX wfx = {};
-			wfx.wFormatTag = WAVE_FORMAT_PCM;
-			wfx.nChannels = 2;
-			wfx.nSamplesPerSec = 44100;
-			wfx.wBitsPerSample = 16;
-			wfx.nBlockAlign = (wfx.wBitsPerSample / 8) * wfx.nChannels;
-			wfx.nAvgBytesPerSec = wfx.nSamplesPerSec * wfx.nBlockAlign;
-
-			HWAVEOUT hWaveOut = nullptr;
-			WAVEHDR header = {};
-			if (waveOutOpen(&hWaveOut, WAVE_MAPPER, &wfx, 0, 0, CALLBACK_NULL) != MMSYSERR_NOERROR) break;
-
-			header.lpData = buffer.data();
-			header.dwBufferLength = (DWORD)size;
-			header.dwFlags = 0;
-
-			waveOutPrepareHeader(hWaveOut, &header, sizeof(WAVEHDR));
-			waveOutWrite(hWaveOut, &header, sizeof(WAVEHDR));
-
-			g_Playing = true;
-			g_Paused = false;
-			g_Position = g_StartTrack;
-
-			DWORD sectors = (DWORD)(size / 2352);
-
-			while (g_Playing && !(header.dwFlags & WHDR_DONE)) {
-				if (!g_Paused) {
-					g_Position++;
-					waveOutRestart(hWaveOut);
-				} else {
-					waveOutPause(hWaveOut);
-				}
-				Sleep(50);
-			}
-
-			waveOutReset(hWaveOut);
-			waveOutUnprepareHeader(hWaveOut, &header, sizeof(WAVEHDR));
-			waveOutClose(hWaveOut);
-
-			g_Playing = false;
-
-			if (!g_Loop) break;
-		}
-	}
-
 	static auto __stdcall AIL_redbook_open_Hook() -> HANDLE {
-		g_TrackFiles.clear();
-
-		WIN32_FIND_DATAA fd;
-		HANDLE hFind = FindFirstFileA("*.bin", &fd);
-		if (hFind == INVALID_HANDLE_VALUE) return nullptr;
-
-		do {
-			std::string filename = fd.cFileName;
-			g_TrackFiles.push_back(filename);
-		} while (FindNextFileA(hFind, &fd));
-
-		FindClose(hFind);
-		std::sort(g_TrackFiles.begin(), g_TrackFiles.end());
-
-		return g_TrackFiles.empty() ? nullptr : (HANDLE)1;
+		if (!cdPlayer.open(127'638)) return nullptr;
+		return (HANDLE)1;
 	}
 
 	static auto __stdcall AIL_redbook_close_Hook(HANDLE handle) -> void {
-		g_Loop = false;
-		StopPlayback();
-		g_CurrentTrack = -1;
+		cdPlayer.close();
 	}
 
 	static auto __stdcall AIL_redbook_play_Hook(HANDLE handle, DWORD start, DWORD end) -> void {
-		if (!handle || g_TrackFiles.empty()) return;
-		g_StartTrack = start;
-		g_EndTrack = end;
-
-		int idx = (int)start;
-		if (idx < 0 || idx >= (int)g_TrackFiles.size()) return;
-
-		StopPlayback();
-		g_PlaybackThread = std::thread(PlaybackThreadFunc, idx);
+		if (!handle) return;
+		cdPlayer.playSectors(start, end);
 	}
 
 	static auto __stdcall AIL_redbook_stop_Hook(HANDLE handle) -> void {
-		g_Loop = false;
-		StopPlayback();
+		cdPlayer.stop();
 	}
 
 	static auto __stdcall AIL_redbook_pause_Hook(HANDLE handle) -> void {
-		g_Paused = true;
+		cdPlayer.pause();
 	}
 
 	static auto __stdcall AIL_redbook_resume_Hook(HANDLE handle) -> void {
-		g_Paused = false;
+		cdPlayer.resume();
 	}
 
 	static auto __stdcall AIL_redbook_status_Hook(HANDLE handle) -> int {
@@ -573,18 +473,15 @@ struct BugToo : Game
 	}
 
 	static auto __stdcall AIL_redbook_position_Hook(HANDLE handle) -> DWORD {
-		return g_Position;
+		return cdPlayer.position();
 	}
 
 	static auto __stdcall AIL_redbook_track_info_Hook(HANDLE handle, int trackNumber, DWORD* start, DWORD* end) -> void {
-		if (!start || !end || trackNumber < 0 || trackNumber >= (int)g_TrackFiles.size()) return;
-		*start = trackNumber;
-		std::ifstream file(g_TrackFiles[trackNumber], std::ios::binary | std::ios::ate);
-		*end = (DWORD)(file.tellg() / 2352);
+		cdPlayer.trackInfo(trackNumber, (uint32_t*)start, (uint32_t*)end);
 	}
 
 	static auto __stdcall AIL_redbook_tracks_Hook(HANDLE handle) -> int {
-		return (int)g_TrackFiles.size();
+		return cdPlayer.trackCount();
 	}
 
 	// The game requires registry entries to work, since the installer doesn't run, we do them manually on first launch

@@ -94,12 +94,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="cd-player.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="game-manager.cpp" />
     <ClCompile Include="patch-engine.cpp" />
     <ClCompile Include="thirdparty\subhook\subhook.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="cd-player.hpp" />
     <ClInclude Include="game-manager.h" />
     <ClInclude Include="games\bug-too.h" />
     <ClInclude Include="games\bug.h" />

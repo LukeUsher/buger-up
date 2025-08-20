@@ -7,6 +7,7 @@
     <ClCompile Include="thirdparty\subhook\subhook.c">
       <Filter>thirdparty</Filter>
     </ClCompile>
+    <ClCompile Include="cd-player.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -36,6 +37,7 @@
     <ClInclude Include="games\bug-too.h">
       <Filter>games</Filter>
     </ClInclude>
+    <ClInclude Include="cd-player.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="thirdparty">

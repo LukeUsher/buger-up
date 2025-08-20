@@ -5,16 +5,6 @@ struct Bug : Game
 
 	inline static std::string _GameDirectory = "";
 
-	//Audio Stuff
-	inline static std::thread g_PlaybackThread;
-	inline static std::atomic<bool> g_Playing = false;
-	inline static std::atomic<bool> g_Paused = false;
-	inline static std::atomic<bool> g_Loop = false;
-	inline static int g_CurrentTrack = -1;
-	inline static std::vector<std::string> g_TrackFiles;
-	inline static HWAVEOUT g_hWaveOut = nullptr;
-	inline static WAVEHDR g_WaveHdr = { 0 };
-
 	auto applyPatches(std::string hash) -> bool override {
 		EnsureDwmMitigationAndRelaunch();
 
@@ -248,125 +238,35 @@ struct Bug : Game
 		return 1;
 	}
 
-	// Audio hooks
-	static auto StopPlayback() -> void {
-		if (g_hWaveOut) {
-			waveOutReset(g_hWaveOut);
-			waveOutUnprepareHeader(g_hWaveOut, &g_WaveHdr, sizeof(WAVEHDR));
-			waveOutClose(g_hWaveOut);
-			g_hWaveOut = nullptr;
-		}
-		g_Playing = false;
-	}
-
-	static auto PlaybackThreadFunc(int trackNumber) -> void {
-		while (true) {
-			if (trackNumber < 0 || trackNumber >= (int)g_TrackFiles.size())	break;
-
-			std::ifstream file(g_TrackFiles[trackNumber], std::ios::binary | std::ios::ate);
-			if (!file.is_open()) break;
-
-			auto size = file.tellg();
-			file.seekg(0, std::ios::beg);
-			std::vector<char> buffer(size);
-			file.read(buffer.data(), size);
-			file.close();
-
-			WAVEFORMATEX wfx = {};
-			wfx.wFormatTag = WAVE_FORMAT_PCM;
-			wfx.nChannels = 2;
-			wfx.nSamplesPerSec = 44100;
-			wfx.wBitsPerSample = 16;
-			wfx.nBlockAlign = (wfx.wBitsPerSample / 8) * wfx.nChannels;
-			wfx.nAvgBytesPerSec = wfx.nSamplesPerSec * wfx.nBlockAlign;
-
-			if (waveOutOpen(&g_hWaveOut, WAVE_MAPPER, &wfx, 0, 0, CALLBACK_NULL) != MMSYSERR_NOERROR) break;
-
-			g_WaveHdr.lpData = buffer.data();
-			g_WaveHdr.dwBufferLength = (DWORD)size;
-			g_WaveHdr.dwFlags = 0;
-			waveOutPrepareHeader(g_hWaveOut, &g_WaveHdr, sizeof(WAVEHDR));
-			waveOutWrite(g_hWaveOut, &g_WaveHdr, sizeof(WAVEHDR));
-
-			g_Playing = true;
-			g_Paused = false;
-
-			while (g_Playing && !(g_WaveHdr.dwFlags & WHDR_DONE)) {
-				if (g_Paused) waveOutPause(g_hWaveOut);
-				else          waveOutRestart(g_hWaveOut);
-				Sleep(50);
-			}
-
-			StopPlayback();
-
-			if (!g_Loop) break;
-		}
-	}
-
 	static auto CdOpen_Hook(HINSTANCE hInstance) -> BOOL {
-		g_TrackFiles.clear();
-
-		WIN32_FIND_DATAA fd;
-		HANDLE hFind = FindFirstFileA("*.bin", &fd);
-		if (hFind == INVALID_HANDLE_VALUE) return FALSE;
-
-		do {
-			std::string filename = fd.cFileName;
-
-			size_t pos1 = filename.find("(Track ");
-			size_t pos2 = filename.find(").bin");
-			if (pos1 != std::string::npos && pos2 != std::string::npos && pos2 > pos1 + 7)	{
-				std::string trackNumStr = filename.substr(pos1 + 7, pos2 - (pos1 + 7));
-				int trackNum = atoi(trackNumStr.c_str());
-				if (trackNum >= 2)	g_TrackFiles.push_back(filename);
-			}
-		} while (FindNextFileA(hFind, &fd));
-
-		FindClose(hFind);
-
-		std::sort(g_TrackFiles.begin(), g_TrackFiles.end());
-
-		if (g_TrackFiles.empty()) return FALSE;
-
+		if (!cdPlayer.open(97'505)) return FALSE;
 		return TRUE;
 	}
 
 	static auto CdClose_Hook() -> BOOL {
-		g_Loop = false;
-		StopPlayback();
-		if (g_PlaybackThread.joinable()) g_PlaybackThread.join();
-		g_CurrentTrack = -1;
+		cdPlayer.stop();
+		cdPlayer.close();
 		return TRUE;
 	}
 
 	static auto CdPlay_Hook(int trackNumber, int loop) -> BOOL {
-		int idx = trackNumber - 2;
-		if (idx < 0 || idx >= (int)g_TrackFiles.size()) return FALSE;
-
-		g_Loop = (loop != 0);
-		g_CurrentTrack = idx;
-
-		StopPlayback();
-		if (g_PlaybackThread.joinable()) g_PlaybackThread.join();
-
-		g_PlaybackThread = std::thread(PlaybackThreadFunc, idx);
+		if (trackNumber < 1 || trackNumber >= cdPlayer.trackCount()) return FALSE;
+		cdPlayer.playTrack(trackNumber, loop != 0);
 		return TRUE;
 	}
 
 	static auto CdStop_Hook() -> BOOL {
-		g_Loop = false;
-		StopPlayback();
-		if (g_PlaybackThread.joinable()) g_PlaybackThread.join();
+		cdPlayer.stop();
 		return TRUE;
 	}
 
 	static auto CdPause_Hook() -> BOOL {
-		g_Paused = true;
+		cdPlayer.pause();
 		return TRUE;
 	}
 
 	static auto CdResume_Hook() -> BOOL {
-		g_Paused = false;
+		cdPlayer.resume();
 		return TRUE;
 	}
 };
