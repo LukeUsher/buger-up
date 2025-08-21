@@ -8,6 +8,7 @@
       <Filter>thirdparty</Filter>
     </ClCompile>
     <ClCompile Include="cd-player.cpp" />
+    <ClCompile Include="winmm-joy.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -38,6 +39,7 @@
       <Filter>games</Filter>
     </ClInclude>
     <ClInclude Include="cd-player.hpp" />
+    <ClInclude Include="winmm-joy.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="thirdparty">
