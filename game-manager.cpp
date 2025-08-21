@@ -42,6 +42,9 @@ auto GameManager::init() -> bool {
 		MessageBoxA(NULL, hash.c_str(), "Unknown game hash", MB_ICONERROR);
 		return false;
 	}
+
+	// Apply any generic patches
+	WinmmJoy::applyPatches();
 	
 	if (!_game->applyPatches(hash)) {
 		MessageBoxA(NULL, hash.c_str(), "Failed to apply game patches", MB_ICONERROR);

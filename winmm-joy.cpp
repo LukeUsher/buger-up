@@ -1,16 +1,25 @@
 #include "winmm-joy.hpp"
 #include <string.h>
+ #include "patch-engine.h"
+
+auto WinmmJoy::applyPatches() -> void {
+    patchEngine.PatchImportedFunction("winmm.dll", "joyGetDevCapsA", WinmmJoy::joyGetDevCapsA);
+    patchEngine.PatchImportedFunction("winmm.dll", "joyGetNumDevs", WinmmJoy::joyGetNumDevs);
+    patchEngine.PatchImportedFunction("winmm.dll", "joyGetPosEx", WinmmJoy::joyGetPosEx);
+    patchEngine.PatchImportedFunction("winmm.dll", "joySetCapture", WinmmJoy::joySetCapture);
+    patchEngine.PatchImportedFunction("winmm.dll", "joySetThreshold", WinmmJoy::joySetThreshold);
+}
 
 WinmmJoy::JoyCapture::~JoyCapture() {
     active = false;
     if (pollThread.joinable()) pollThread.join();
 }
 
-DWORD __stdcall WinmmJoy::ThumbToJoyRange(LONG val) {
+auto __stdcall WinmmJoy::ThumbToJoyRange(LONG val) -> DWORD {
     return static_cast<DWORD>((int)val + 32768);
 }
 
-DWORD __stdcall WinmmJoy::MapButtons(WORD xb) {
+auto __stdcall WinmmJoy::MapButtons(WORD xb) -> DWORD {
     DWORD out = 0;
     if (xb & XINPUT_GAMEPAD_A)              out |= (1u << 0);
     if (xb & XINPUT_GAMEPAD_B)              out |= (1u << 1);
@@ -29,7 +38,7 @@ DWORD __stdcall WinmmJoy::MapButtons(WORD xb) {
     return out;
 }
 
-WORD __stdcall WinmmJoy::MapFaceButtons(WORD xb) {
+auto __stdcall WinmmJoy::MapFaceButtons(WORD xb) -> WORD {
     WORD out = 0;
     if (xb & XINPUT_GAMEPAD_A) out |= JOY_BUTTON1;
     if (xb & XINPUT_GAMEPAD_B) out |= JOY_BUTTON2;
@@ -38,7 +47,7 @@ WORD __stdcall WinmmJoy::MapFaceButtons(WORD xb) {
     return out;
 }
 
-MMRESULT __stdcall WinmmJoy::joyGetDevCapsA(UINT_PTR uJoyID, LPJOYCAPSA pjc, UINT cbjc) {
+auto __stdcall WinmmJoy::joyGetDevCapsA(UINT_PTR uJoyID, LPJOYCAPSA pjc, UINT cbjc) -> MMRESULT {
     if (!pjc || cbjc < sizeof(JOYCAPSA)) return MMSYSERR_INVALPARAM;
     if (uJoyID >= 4) return MMSYSERR_NODRIVER;
 
@@ -56,7 +65,7 @@ MMRESULT __stdcall WinmmJoy::joyGetDevCapsA(UINT_PTR uJoyID, LPJOYCAPSA pjc, UIN
     return JOYERR_NOERROR;
 }
 
-MMRESULT __stdcall WinmmJoy::joyGetPosEx(UINT uJoyID, LPJOYINFOEX pji) {
+auto __stdcall WinmmJoy::joyGetPosEx(UINT uJoyID, LPJOYINFOEX pji) -> MMRESULT {
     if (uJoyID >= 4) return MMSYSERR_NODRIVER;
 
     XINPUT_STATE xi{};
@@ -125,11 +134,11 @@ MMRESULT __stdcall WinmmJoy::joyGetPosEx(UINT uJoyID, LPJOYINFOEX pji) {
     return JOYERR_NOERROR;
 }
 
-UINT __stdcall WinmmJoy::joyGetNumDevs() {
+auto __stdcall WinmmJoy::joyGetNumDevs() -> UINT {
     return 4;
 }
 
-MMRESULT __stdcall WinmmJoy::joySetCapture(HWND hwnd, UINT uJoyID, UINT uPeriod, BOOL fChanged) {
+auto __stdcall WinmmJoy::joySetCapture(HWND hwnd, UINT uJoyID, UINT uPeriod, BOOL fChanged) -> MMRESULT {
     if (uJoyID >= 4) return MMSYSERR_NODRIVER;
 
     if (captures.count(uJoyID)) {
@@ -147,13 +156,13 @@ MMRESULT __stdcall WinmmJoy::joySetCapture(HWND hwnd, UINT uJoyID, UINT uPeriod,
     return JOYERR_NOERROR;
 }
 
-MMRESULT __stdcall WinmmJoy::joySetThreshold(UINT uJoyID, UINT uThreshold) {
+auto __stdcall WinmmJoy::joySetThreshold(UINT uJoyID, UINT uThreshold) -> UINT {
     if (uJoyID >= 4) return MMSYSERR_NODRIVER;
     if (captures.count(uJoyID)) captures[uJoyID].threshold = uThreshold;
     return JOYERR_NOERROR;
 }
 
-void WinmmJoy::PollJoystick(JoyCapture* capture) {
+auto WinmmJoy::PollJoystick(JoyCapture* capture) -> void {
     while (capture->active.load()) {
         XINPUT_STATE state{};
         if (XInputGetState(capture->uJoyID, &state) != ERROR_SUCCESS) {

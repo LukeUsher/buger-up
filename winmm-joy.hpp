@@ -26,20 +26,23 @@ struct WinmmJoy {
         ~JoyCapture();
     };
 
+    static auto applyPatches() -> void;
+
     inline static DpadMode dpadMode = DpadMode::Axis;
 
     // API hooks
-    static DWORD __stdcall ThumbToJoyRange(LONG val);
-    static DWORD __stdcall MapButtons(WORD xb);
-    static WORD  __stdcall MapFaceButtons(WORD xb);
+    static auto __stdcall ThumbToJoyRange(LONG val) -> DWORD;
+    static auto __stdcall MapButtons(WORD xb) -> DWORD;
+    static auto  __stdcall MapFaceButtons(WORD xb) -> WORD;
 
-    static MMRESULT __stdcall joyGetDevCapsA(UINT_PTR uJoyID, LPJOYCAPSA pjc, UINT cbjc);
-    static MMRESULT __stdcall joyGetPosEx(UINT uJoyID, LPJOYINFOEX pji);
-    static UINT     __stdcall joyGetNumDevs();
-    static MMRESULT __stdcall joySetCapture(HWND hwnd, UINT uJoyID, UINT uPeriod, BOOL fChanged);
-    static MMRESULT __stdcall joySetThreshold(UINT uJoyID, UINT uThreshold);
+    static auto __stdcall joyGetDevCapsA(UINT_PTR uJoyID, LPJOYCAPSA pjc, UINT cbjc) -> MMRESULT;
+    static auto __stdcall joyGetPosEx(UINT uJoyID, LPJOYINFOEX pji) -> MMRESULT;
+    static auto __stdcall joyGetNumDevs() -> UINT;
+    static auto __stdcall joySetCapture(HWND hwnd, UINT uJoyID, UINT uPeriod, BOOL fChanged) -> MMRESULT;
+    static auto __stdcall joySetThreshold(UINT uJoyID, UINT uThreshold) -> MMRESULT;
 
 private:
+    static auto PollJoystick(JoyCapture* capture) -> void;
+
     inline static std::map<UINT, JoyCapture> captures{};
-    static void PollJoystick(JoyCapture* capture);
 };

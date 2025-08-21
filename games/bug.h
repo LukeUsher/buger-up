@@ -29,10 +29,6 @@ struct Bug : Game
 		patchEngine.InjectCall(0x00411561 + 3, FMV_CopyBuffer);
 		patchEngine.PatchBinary(0x00411569, { 0x90, 0x90, 0x90, 0x90, 0x90 }); //nop padding
 
-		//Hook legacy joypad apis
-		patchEngine.PatchImportedFunction("winmm.dll", "joyGetDevCapsA", WinmmJoy::joyGetDevCapsA);
-		patchEngine.PatchImportedFunction("winmm.dll", "joyGetPosEx", WinmmJoy::joyGetPosEx);
-
 		//NoCD:Hook IsCorrectDiscInserted to always return true
 		patchEngine.PatchFunction("IsCorrectDiscInserted", 0x00411300, IsCorrectDiscInserted_Hook);
 

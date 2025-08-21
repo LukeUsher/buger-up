@@ -51,13 +51,6 @@ struct BugToo : Game
 		//Hook ShowMessageBox to prevent the game from changing window size when showing message
 		patchEngine.PatchFunction("ShowMessageBox", 0x0041D9DB, ShowMessageBox_Hook);
 
-		//Hook legacy joypad apis
-		patchEngine.PatchImportedFunction("winmm.dll", "joyGetDevCapsA", WinmmJoy::joyGetDevCapsA);
-		patchEngine.PatchImportedFunction("winmm.dll", "joyGetNumDevs", WinmmJoy::joyGetNumDevs);
-		patchEngine.PatchImportedFunction("winmm.dll", "joyGetPosEx", WinmmJoy::joyGetPosEx);
-		patchEngine.PatchImportedFunction("winmm.dll", "joySetCapture", WinmmJoy::joySetCapture);
-		patchEngine.PatchImportedFunction("winmm.dll", "joySetThreshold", WinmmJoy::joySetThreshold);
-
 		//NoCD:Hook CD-DA routines
 		patchEngine.PatchImportedFunction("mss32.dll", "_AIL_redbook_open@4", (void*)AIL_redbook_open_Hook);
 		patchEngine.PatchImportedFunction("mss32.dll", "_AIL_redbook_close@4", (void*)AIL_redbook_close_Hook);
