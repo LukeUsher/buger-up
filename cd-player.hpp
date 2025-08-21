@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <atomic>
 #include <mutex>
+#include <SDL3/SDL.h>
 
 class CdPlayer {
 public:
@@ -19,8 +20,6 @@ public:
         bool isData = false;
         int number = 0;
     };
-    
-    ~CdPlayer();
 
     auto open(uint32_t dataTrackSize) -> bool;
     auto close() -> void;
@@ -36,8 +35,6 @@ public:
     auto pause() -> void;
     auto resume() -> void;
 
-    auto playing() const -> bool;
-    auto paused() const -> bool;
     auto position() const -> uint32_t;
 
 private:
@@ -45,8 +42,6 @@ private:
 
     std::vector<CdTrack> _tracks;
     std::thread _thread;
-    std::atomic<bool> _playing = false;
-    std::atomic<bool> _paused = false;
     std::atomic<bool> _loop = false;
     std::atomic<uint32_t> _position = 0;
     std::atomic<bool> _terminating;
@@ -55,6 +50,7 @@ private:
     uint64_t _endByte = 0;
 
     std::mutex _mutex;
+    SDL_AudioStream* _stream;
 };
 
 extern CdPlayer cdPlayer;

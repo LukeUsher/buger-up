@@ -5,13 +5,21 @@ static constexpr uint32_t pregap_sectors = 150; // ~2s lead-in
 
 CdPlayer cdPlayer;
 
-CdPlayer::~CdPlayer() {
-	stop();
-	close();
-}
-
 auto CdPlayer::open(uint32_t dataTrackSectors) -> bool {
 	std::lock_guard<std::mutex> lock(_mutex);
+
+	if (!SDL_Init(SDL_INIT_AUDIO)) {
+		return false;
+	}
+
+	SDL_AudioSpec spec;
+	spec.freq = 44100;
+	spec.format = SDL_AUDIO_S16LE;
+	spec.channels = 2;
+	_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
+	if (!_stream) {
+		return false;
+	}
 
 	_tracks.clear(); 
 	
@@ -66,17 +74,22 @@ auto CdPlayer::open(uint32_t dataTrackSectors) -> bool {
 	
 	_thread = std::thread(&CdPlayer::playbackThread, this); 
 	_terminating = false;
+
+	SDL_ResumeAudioStreamDevice(_stream);
 	return _tracks.size() > 1;
 } 
 
 auto CdPlayer::close() -> void { 
+	stop();
 	_terminating = true; 
-	stop(); 
-	_tracks.clear(); 
 	if (_thread.joinable()) _thread.join();
+	_tracks.clear();
+	SDL_DestroyAudioStream(_stream);
+	SDL_QuitSubSystem(SDL_INIT_AUDIO);
 } 
 
 auto CdPlayer::playTrack(int track, bool loop) -> void { 
+	SDL_ClearAudioStream(_stream);
 	if (track < 1 || track >(int)_tracks.size()) return;
 	auto& t = _tracks[track - 1]; 
 	playSectors(t.startSector, t.endSector, loop); 
@@ -102,42 +115,34 @@ auto CdPlayer::playSectors(uint32_t start, uint32_t end, bool loop) -> void {
 
 	_loop = loop;
 	_position = start; 
-	_playing = true; 
-	_paused = false; 
+	resume();
 }
 
 auto CdPlayer::stop() -> void { 
 	std::lock_guard<std::mutex> lock(_mutex); 
-	_playing = false; 
-	_paused = false; 
+	SDL_ClearAudioStream(_stream);
+	pause();
 	_currentByte = 0; 
 	_endByte = 0; 
 	_position = 0; 
 } 
 
 auto CdPlayer::pause() -> void { 
-	_paused = true; 
+	SDL_PauseAudioStreamDevice(_stream);
 } 
 
 auto CdPlayer::resume() -> void { 
-	_paused = false; 
-} 
-
-auto CdPlayer::playing() const -> bool { 
-	return _playing; 
-} 
-
-auto CdPlayer::paused() const -> bool { 
-	return _paused; 
+	SDL_ResumeAudioStreamDevice(_stream);
 } 
 
 auto CdPlayer::position() const -> uint32_t { 
 	return _position; 
 } 
-
 auto CdPlayer::playbackThread() -> void {
+	const size_t chunkSize = sector_size * 16;
+
 	while (!_terminating) {
-		if (!_playing) {
+		if (SDL_AudioStreamDevicePaused(_stream)) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
 			continue;
 		}
@@ -154,13 +159,13 @@ auto CdPlayer::playbackThread() -> void {
 			}
 
 			if (!currentTrack) {
-				_playing = false;
+				pause();
 				continue;
 			}
 		}
 
 		if (currentTrack->isData) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+			pause();
 			continue;
 		}
 
@@ -169,7 +174,19 @@ auto CdPlayer::playbackThread() -> void {
 		if (_currentByte < trackStartByte) _currentByte = trackStartByte;
 
 		uint64_t readStart = _currentByte - trackStartByte;
-		uint64_t readSize = trackEndByte - _currentByte;
+		uint64_t remaining = trackEndByte - _currentByte;
+		if (remaining == 0) {
+			if (_loop) {
+				_currentByte = trackStartByte;
+				_position = currentTrack->startSector;
+				continue;
+			} else {
+				pause();
+				continue;
+			}
+		}
+
+		size_t toRead = (size_t)std::min<uint64_t>(remaining, chunkSize);
 
 		std::ifstream file(currentTrack->filename, std::ios::binary);
 		if (!file.is_open()) {
@@ -178,48 +195,16 @@ auto CdPlayer::playbackThread() -> void {
 		}
 
 		file.seekg(readStart, std::ios::beg);
-		std::vector<char> buffer(readSize);
+		std::vector<char> buffer(toRead);
 		file.read(buffer.data(), buffer.size());
 
-		WAVEFORMATEX wfx = {};
-		wfx.wFormatTag = WAVE_FORMAT_PCM;
-		wfx.nChannels = 2;
-		wfx.nSamplesPerSec = 44100;
-		wfx.wBitsPerSample = 16;
-		wfx.nBlockAlign = (wfx.wBitsPerSample / 8) * wfx.nChannels;
-		wfx.nAvgBytesPerSec = wfx.nSamplesPerSec * wfx.nBlockAlign;
+		SDL_PutAudioStreamData(_stream, buffer.data(), (int)buffer.size());
 
-		HWAVEOUT hWaveOut = nullptr;
-		WAVEHDR header = {};
-		if (waveOutOpen(&hWaveOut, WAVE_MAPPER, &wfx, 0, 0, CALLBACK_NULL) != MMSYSERR_NOERROR) {
-			stop();
-			continue;
-		}
+		_currentByte += buffer.size();
+		_position = (uint32_t)(_currentByte / sector_size);
 
-		header.lpData = buffer.data();
-		header.dwBufferLength = (DWORD)buffer.size();
-		waveOutPrepareHeader(hWaveOut, &header, sizeof(WAVEHDR));
-		waveOutWrite(hWaveOut, &header, sizeof(WAVEHDR));
-
-		while (_playing && !(header.dwFlags & WHDR_DONE)) {
-			if (_paused) waveOutPause(hWaveOut);
-			else waveOutRestart(hWaveOut);
-
-			std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
-			if (!_paused) {
-				_currentByte += sector_size;
-				_position = (uint32_t)(_currentByte / sector_size);
-			}
-
-			if (_currentByte >= trackEndByte) {
-				if (_loop) _currentByte = trackStartByte;
-				else _playing = false;
-			}
-		}
-
-		waveOutReset(hWaveOut);
-		waveOutUnprepareHeader(hWaveOut, &header, sizeof(WAVEHDR));
-		waveOutClose(hWaveOut);
+		int bytesPerSec = 44100 * 2 * 2;
+		int ms = (int)((buffer.size() * 1000) / bytesPerSec);
+		std::this_thread::sleep_for(std::chrono::milliseconds(ms / 2));
 	}
 }
