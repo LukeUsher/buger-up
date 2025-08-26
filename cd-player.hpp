@@ -21,6 +21,8 @@ public:
         int number = 0;
     };
 
+    ~CdPlayer();
+
     auto open(uint32_t dataTrackSize) -> bool;
     auto close() -> void;
 

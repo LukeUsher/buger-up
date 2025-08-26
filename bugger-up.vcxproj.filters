@@ -9,6 +9,18 @@
     </ClCompile>
     <ClCompile Include="cd-player.cpp" />
     <ClCompile Include="winmm-joy.cpp" />
+    <ClCompile Include="ddraw\clipper.cpp">
+      <Filter>ddraw</Filter>
+    </ClCompile>
+    <ClCompile Include="ddraw\ddraw.cpp">
+      <Filter>ddraw</Filter>
+    </ClCompile>
+    <ClCompile Include="ddraw\palette.cpp">
+      <Filter>ddraw</Filter>
+    </ClCompile>
+    <ClCompile Include="ddraw\surface.cpp">
+      <Filter>ddraw</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -40,6 +52,18 @@
     </ClInclude>
     <ClInclude Include="cd-player.hpp" />
     <ClInclude Include="winmm-joy.hpp" />
+    <ClInclude Include="ddraw\clipper.hpp">
+      <Filter>ddraw</Filter>
+    </ClInclude>
+    <ClInclude Include="ddraw\ddraw.hpp">
+      <Filter>ddraw</Filter>
+    </ClInclude>
+    <ClInclude Include="ddraw\palette.hpp">
+      <Filter>ddraw</Filter>
+    </ClInclude>
+    <ClInclude Include="ddraw\surface.hpp">
+      <Filter>ddraw</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="thirdparty">
@@ -50,6 +74,9 @@
     </Filter>
     <Filter Include="games">
       <UniqueIdentifier>{c1abc6b2-e37b-4d6e-8ee7-da2325b6fbfa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ddraw">
+      <UniqueIdentifier>{c3db3a1f-1ed9-44a2-b43c-8a683ec45afc}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

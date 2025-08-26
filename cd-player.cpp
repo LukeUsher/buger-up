@@ -5,21 +5,22 @@ static constexpr uint32_t pregap_sectors = 150; // ~2s lead-in
 
 CdPlayer cdPlayer;
 
+CdPlayer::~CdPlayer() {
+	close();
+	if (_thread.joinable()) _thread.join();
+}
+
 auto CdPlayer::open(uint32_t dataTrackSectors) -> bool {
 	std::lock_guard<std::mutex> lock(_mutex);
 
-	if (!SDL_Init(SDL_INIT_AUDIO)) {
-		return false;
-	}
+	if (!SDL_Init(SDL_INIT_AUDIO)) return false;
 
 	SDL_AudioSpec spec;
 	spec.freq = 44100;
 	spec.format = SDL_AUDIO_S16LE;
 	spec.channels = 2;
 	_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
-	if (!_stream) {
-		return false;
-	}
+	if (!_stream) return false;
 
 	_tracks.clear(); 
 	
@@ -137,7 +138,8 @@ auto CdPlayer::resume() -> void {
 
 auto CdPlayer::position() const -> uint32_t { 
 	return _position; 
-} 
+}
+
 auto CdPlayer::playbackThread() -> void {
 	const size_t chunkSize = sector_size * 16;
 

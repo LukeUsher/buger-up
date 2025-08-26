@@ -6,8 +6,6 @@ struct Bug : Game
 	inline static std::string _GameDirectory = "";
 
 	auto applyPatches(std::string hash) -> bool override {
-		EnsureDwmMitigationAndRelaunch();
-
 		//Remove hard-coded resolution limit of <1024 pixels wide @ 8bpp
 		patchEngine.PatchFunction("IsDisplayModeCompatible", 0x00413530, IsDisplayModeCompatible_Hook);
 #if _DEBUG
@@ -15,19 +13,23 @@ struct Bug : Game
 		patchEngine.PatchFunction("DebugPrint", 0x00407F30, DebugPrint_Hook);
 #endif
 
-		//Hook DirectDrawCreate to enable 8bpp 
-		patchEngine.PatchImportedFunction("ddraw.dll", "DirectDrawCreate", DirectDrawCreate_Hook, (void**)&_DirectDrawCreate);
-
 		//Skip DirectIO wait for vblank (the game uses Sleep for timing anyway)
 		patchEngine.InjectJump(0x0041158B, 0x004115B9);
 
 		//Disable forced 320x240 fullscreen for FMV playback
-		patchEngine.PatchFunction("FMV_SetFullscreen", 0x00411670, FMV_SetFullscreenHook);
-
+		patchEngine.PatchFunction("FMV_SetFullscreen", 0x00411670, FMV_SetFullscreen_Hook);
+		patchEngine.PatchFunction("FMV_RestoreWindowedMode", 0x00411790, FMV_RestoreWindowedMode_Hook);
+		
 		//Implement a proper FMV video blit that actually respects stride
 		patchEngine.PatchBinary(0x00411561,    {0xFF, 0x73, 0x14}); // push [ebx+14h]
 		patchEngine.InjectCall(0x00411561 + 3, FMV_CopyBuffer);
 		patchEngine.PatchBinary(0x00411569, { 0x90, 0x90, 0x90, 0x90, 0x90 }); //nop padding
+
+		//Skip FMV out of bounds memset
+		patchEngine.PatchBinary(0x00411506, { 0x90, 0x90 });
+
+		//Prevent the game from setting the system palette, force it to set DDRAW palette instead
+		patchEngine.PatchBinary(0x00416697, { 0x90, 0x90 });
 
 		//NoCD:Hook IsCorrectDiscInserted to always return true
 		patchEngine.PatchFunction("IsCorrectDiscInserted", 0x00411300, IsCorrectDiscInserted_Hook);
@@ -64,28 +66,15 @@ struct Bug : Game
 		return;
 	}
 
-	static auto __stdcall DirectDrawCreate_Hook(GUID* lpGUID, LPDIRECTDRAW* lplpDD, IUnknown* pUnkOuter) -> HRESULT {
-		auto hResult = _DirectDrawCreate(lpGUID, lplpDD, pUnkOuter);
-		if (*lplpDD == nullptr) {
-			MessageBoxA(NULL, "Failed to get DirectDraw vtbl", "Errot", MB_ICONERROR);
-			ExitProcess(0);
-		}
-
-		// Do not allow the game to switch display resolution
-		// If we skip this call completely, the game doesn't get an 8bpp buffer and renders incorrectly
-		int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-		int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-		(*lplpDD)->SetDisplayMode(screenWidth, screenHeight, 8);
-
-		return hResult;
-	}
-
-	static auto __cdecl FMV_SetFullscreenHook() -> HRESULT {
+	static auto __cdecl FMV_SetFullscreen_Hook() -> HRESULT {
 		return 0;
 	}
 
-	static auto __stdcall FMV_CopyBuffer(uint8_t* srcBuffer) -> void
-	{
+	static auto __cdecl FMV_RestoreWindowedMode_Hook() -> void {
+		return;
+	}
+
+	static auto __stdcall FMV_CopyBuffer(uint8_t* srcBuffer) -> void {
 		DDSURFACEDESC* fmvSurfaceDesc = (DDSURFACEDESC*)0x5244E0;
 
 		if (!srcBuffer) return;

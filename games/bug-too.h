@@ -1,49 +1,15 @@
 struct BugToo : Game
 {
-	inline static LPDIRECTDRAW _lpDD = nullptr;
-	inline static LPDIRECTDRAWSURFACE _backBuffer = nullptr;
-
-	using DirectDrawCreate_t = HRESULT(__stdcall*)(GUID*, LPDIRECTDRAW*, IUnknown*);
-	inline static DirectDrawCreate_t _DirectDrawCreate = nullptr;
-
-	using DirectDraw_SetDisplayMode_t = HRESULT(__stdcall*)(LPDIRECTDRAW, DWORD, DWORD, DWORD);
-	inline static DirectDraw_SetDisplayMode_t _DirectDraw_SetDisplayMode = nullptr;
-
-	using DirectDraw_SetCooperativeLevel_t = HRESULT(__stdcall*)(LPDIRECTDRAW, HWND, DWORD);
-	inline static DirectDraw_SetCooperativeLevel_t _DirectDraw_SetCooperativeLevel = nullptr;
-
-	using DirectDraw_CreateSurface_t = HRESULT(__stdcall*)(LPDIRECTDRAW, LPDDSURFACEDESC, LPDIRECTDRAWSURFACE*, IUnknown*);
-	inline static DirectDraw_CreateSurface_t _DirectDraw_CreateSurface = nullptr;
-
-	using DirectDraw_GetAttachedSurface_t = HRESULT(__stdcall*)(IDirectDrawSurface*, LPDDSCAPS, LPDIRECTDRAWSURFACE*);
-	inline static DirectDraw_GetAttachedSurface_t _DirectDraw_GetAttachedSurface;
-
-	using DirectDrawSurface_Flip_t = HRESULT(__stdcall*)(LPDIRECTDRAWSURFACE, LPDIRECTDRAWSURFACE, DWORD);
-	inline static DirectDrawSurface_Flip_t _DirectDrawSurface_Flip = nullptr;
-
-	using CreateWindowExA_t = HWND(__stdcall*)(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam);
-	inline static CreateWindowExA_t _CreateWindowExA;
-
 	inline static std::string _GameDirectory = "";
 
 	inline static HWND _hwnd = nullptr;
 
 	auto applyPatches(std::string hash) -> bool override {
-		EnsureDwmMitigationAndRelaunch();
 		_GameDirectory = GetCurrentGameInstallDirectory();
 		SetupRegistryAndShortcuts();
 
 		//Remove OS version checks
 		patchEngine.PatchFunction("IsGameCompatible", 0x00423BE0, IsGameCompatible_Hook);
-		
-		//Force ValidateDisplayMode to return true
-		patchEngine.PatchFunction("ValidateDiplayMode", 0x0040163A, ValidateDisplayMode_Hook);
-
-		//Hook DirectDrawCreate to enable 8bpp 
-		patchEngine.PatchImportedFunction("ddraw.dll", "DirectDrawCreate", DirectDrawCreate_Hook, (void**)&_DirectDrawCreate);
-
-		//Hook CreateWindow to remove forced fullscreen
-		patchEngine.PatchImportedFunction("user32.dll", "CreateWindowExA", (void*)CreateWindowExA_Hook, (void**)& _CreateWindowExA);
 
 		//Hook ShowCursor to force cursor to be enabled
 		patchEngine.PatchImportedFunction("user32.dll", "ShowCursor", (void*)ShowCursor_Hook);
@@ -69,129 +35,9 @@ struct BugToo : Game
 		return 1;
 	}
 
-	static auto __stdcall ValidateDisplayMode_Hook(LPDDSURFACEDESC, LPVOID)-> HRESULT {
-		*(uint32_t*)0x00447068 = 1; //validDisplayModeFound
-		return S_OK;
-	}
-
-	static auto __stdcall CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, 
-		int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam) -> HWND {
-
-		dwStyle = WS_OVERLAPPEDWINDOW | WS_VISIBLE; 
-		dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
-		auto x = (GetSystemMetrics(SM_CXSCREEN) - 320) / 2;
-		auto y = (GetSystemMetrics(SM_CYSCREEN) - 240) / 2;
-
-		RECT rc = { 0, 0, 320, 240 };
-		AdjustWindowRectEx(&rc, dwStyle, FALSE, dwExStyle);
-		nWidth = rc.right - rc.left;
-		nHeight = rc.bottom - rc.top;
-
-		_hwnd = _CreateWindowExA(
-			dwExStyle, lpClassName, lpWindowName, dwStyle,
-			x, y, nWidth, nHeight,
-			hWndParent, hMenu, hInstance, lpParam
-		);
-
-		return _hwnd;
-	}
-
 	static auto __stdcall ShowCursor_Hook(BOOL bShow) -> int {
 		if (bShow) return 1;
 		return -1;
-	}
-
-	static auto __stdcall DirectDrawCreate_Hook(GUID* lpGUID, LPDIRECTDRAW* lplpDD, IUnknown* pUnkOuter) -> HRESULT {
-		auto hResult = _DirectDrawCreate(lpGUID, lplpDD, pUnkOuter);
-		if (*lplpDD == nullptr) {
-			MessageBoxA(NULL, "Failed to get DirectDraw vtbl", "Errot", MB_ICONERROR);
-			ExitProcess(0);
-		}
-
-		// Do not allow the game to switch display resolution
-		// If we skip this call completely, the game doesn't get an 8bpp buffer and renders incorrectly
-		int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-		int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-		_lpDD = *lplpDD;
-		_lpDD->SetDisplayMode(screenWidth, screenHeight, 8);
-		
-		//Patch VTBL to hook other DirectDraw calls 
-		auto vtbl = *(LPVOID**)*lplpDD;
-
-		// Don't allow forced display mode switches
-		if (!_DirectDraw_SetDisplayMode) _DirectDraw_SetDisplayMode = (DirectDraw_SetDisplayMode_t)vtbl[21];
-		vtbl[21] = (LPVOID)DirectDraw_SetDisplayMode_Hook;
-
-		// Don't allow Co-operative mode switches
-		if (!_DirectDraw_SetCooperativeLevel) _DirectDraw_SetCooperativeLevel = (DirectDraw_SetCooperativeLevel_t)vtbl[20];
-		vtbl[20] = DirectDraw_SetCooperativeLevel_Hook;
-
-		// Force non-exclusive surfaces
-		if (!_DirectDraw_CreateSurface) _DirectDraw_CreateSurface = (DirectDraw_CreateSurface_t)vtbl[6];
-		vtbl[6] = DirectDraw_CreateSurface_Hook;
-
-		return hResult;
-	}
-
-	static auto __stdcall DirectDraw_SetDisplayMode_Hook(LPDIRECTDRAW lpDD, DWORD width, DWORD height, DWORD bpp) -> HRESULT {
-		int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-		int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-		_DirectDraw_SetDisplayMode(lpDD, screenWidth, screenHeight, bpp);
-		return S_OK;
-	}
-
-	static auto __stdcall DirectDraw_SetCooperativeLevel_Hook(LPDIRECTDRAW lpDD, HWND hWnd, DWORD flags) -> HRESULT {
-		return _DirectDraw_SetCooperativeLevel(lpDD, hWnd, DDSCL_NORMAL);
-	}
-
-	static auto __stdcall DirectDraw_CreateSurface_Hook(LPDIRECTDRAW lpDD, LPDDSURFACEDESC lpDDSurfaceDesc, LPDIRECTDRAWSURFACE* lplpDDSurface, IUnknown* pUnkOuter) -> HRESULT {
-		// The game expects a backbuffer, but we want to create an off screen surface instead; so let's do that and then patch GetAttachedSurface to return another surface
-		lpDDSurfaceDesc->dwSize = sizeof(DDSURFACEDESC);
-		lpDDSurfaceDesc->dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH;
-		lpDDSurfaceDesc->dwWidth = 320;
-		lpDDSurfaceDesc->dwHeight = 240;
-		lpDDSurfaceDesc->ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN;
-
-		auto result = _DirectDraw_CreateSurface(lpDD, lpDDSurfaceDesc, lplpDDSurface, pUnkOuter);
-		if (result != S_OK) return result;
-		auto vtbl = *(LPVOID**)*lplpDDSurface;
-
-		if (!_DirectDrawSurface_Flip) _DirectDrawSurface_Flip = (DirectDrawSurface_Flip_t)vtbl[11];
-		vtbl[11] = DirectDrawSurface_Flip_Hook;
-
-		if (!_DirectDraw_GetAttachedSurface) _DirectDraw_GetAttachedSurface = (DirectDraw_GetAttachedSurface_t)vtbl[12];
-		vtbl[12] = DirectDraw_GetAttachedSurface_Hook;
-
-		_backBuffer = *lplpDDSurface;
-
-		return result;
-	}
-
-	static auto __stdcall DirectDraw_GetAttachedSurface_Hook(IDirectDrawSurface* lpDDS, LPDDSCAPS lpDDSCaps, LPDIRECTDRAWSURFACE* lplpDDAttachedSurface) -> HRESULT {
-		*lplpDDAttachedSurface = _backBuffer;
-		return DD_OK;
-	}
-
-	static auto __stdcall DirectDrawSurface_Flip_Hook(LPDIRECTDRAWSURFACE lpPrimary, LPDIRECTDRAWSURFACE lpDDSurfaceTargetOverride, DWORD dwFlags) -> HRESULT
-	{
-		RECT client;
-		GetClientRect(_hwnd, &client);
-
-		int clientWidth = client.right - client.left;
-		int clientHeight = client.bottom - client.top;
-
-		auto hDC = GetDC(_hwnd);
-
-		HDC hdcSurface;
-		_backBuffer->GetDC(&hdcSurface);
-		SetStretchBltMode(hDC, COLORONCOLOR);
-		StretchBlt(hDC,	0, 0, clientWidth, clientHeight, hdcSurface, 0, 0, 320, 240, SRCCOPY);
-		_backBuffer->ReleaseDC(hdcSurface);
-
-		ReleaseDC(_hwnd, hDC);
-
-		RedrawWindow(_hwnd, nullptr, nullptr, RDW_INVALIDATE | RDW_UPDATENOW | RDW_FRAME);
-		return DD_OK;
 	}
 
 	static auto __cdecl ShowMessageBox_Hook(LPCSTR lpCaption, LPCSTR lpText, int type) -> int {

@@ -10,6 +10,7 @@
 
 #include "game-manager.h"
 #include "patch-engine.h"
+#include "ddraw/ddraw.hpp"
 #include "thirdparty/xxhash32.h"
 
 GameManager gameManager;
@@ -45,6 +46,7 @@ auto GameManager::init() -> bool {
 
 	// Apply any generic patches
 	WinmmJoy::applyPatches();
+	DirectDraw::applyPatches();
 	
 	if (!_game->applyPatches(hash)) {
 		MessageBoxA(NULL, hash.c_str(), "Failed to apply game patches", MB_ICONERROR);

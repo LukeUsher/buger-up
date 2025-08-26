@@ -44,13 +44,13 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(ShortProjectName)\$(Configuration)\bin</OutDir>
-    <IntDir>$(ShortProjectName)\$(Configuration)\obj</IntDir>
+    <OutDir>_bin\$(Configuration)\</OutDir>
+    <IntDir>_obj\$(Configuration)\</IntDir>
     <TargetName>winmm</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(ShortProjectName)\$(Configuration)\bin</OutDir>
-    <IntDir>$(ShortProjectName)\$(Configuration)\obj</IntDir>
+    <OutDir>_bin\$(Configuration)\</OutDir>
+    <IntDir>_obj\$(Configuration)\</IntDir>
     <TargetName>winmm</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -63,6 +63,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)thirdparty\SDL3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -83,6 +84,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)thirdparty\SDL3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -95,6 +97,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="cd-player.cpp" />
+    <ClCompile Include="ddraw\clipper.cpp" />
+    <ClCompile Include="ddraw\ddraw.cpp" />
+    <ClCompile Include="ddraw\palette.cpp" />
+    <ClCompile Include="ddraw\surface.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="game-manager.cpp" />
     <ClCompile Include="patch-engine.cpp" />
@@ -103,6 +109,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cd-player.hpp" />
+    <ClInclude Include="ddraw\clipper.hpp" />
+    <ClInclude Include="ddraw\ddraw.hpp" />
+    <ClInclude Include="ddraw\palette.hpp" />
+    <ClInclude Include="ddraw\surface.hpp" />
     <ClInclude Include="game-manager.h" />
     <ClInclude Include="games\bug-too.h" />
     <ClInclude Include="games\bug.h" />
