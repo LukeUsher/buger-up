@@ -80,8 +80,7 @@ struct Bug : Game
 		if (!srcBuffer) return;
 		if (!fmvSurfaceDesc->lpSurface || fmvSurfaceDesc->lPitch <= 0) return;
 
-		uint8_t* dst = (uint8_t*)fmvSurfaceDesc->lpSurface;
-		const uint8_t* s = (const uint8_t*)srcBuffer;
+		uint8_t* dst = static_cast<uint8_t*>(fmvSurfaceDesc->lpSurface);
 
 		const int surfW = fmvSurfaceDesc->dwWidth;
 		const int surfH = fmvSurfaceDesc->dwHeight;
@@ -96,15 +95,24 @@ struct Bug : Game
 		const int realW = 304;
 		const int realH = 232;
 
-		const int copyW = std::min(surfW, realW);
-		const int copyH = std::min(surfH, realH);
+		const uint8_t* srcStart = srcBuffer + srcY * fmvW + srcX;
 
-		const uint8_t* srcStart = s + srcY * fmvW + srcX;
+		const float scaleX = static_cast<float>(realW) / static_cast<float>(surfW);
+		const float scaleY = static_cast<float>(realH) / static_cast<float>(surfH);
 
-		for (int y = 0; y < copyH; ++y) {
-			memcpy(dst + y * pitch, srcStart + y * fmvW, copyW);
+		for (int y = 0; y < surfH; ++y) {
+			int sy = static_cast<int>(y * scaleY);
+			const uint8_t* srcRow = srcStart + sy * fmvW;
+
+			uint8_t* dstRow = dst + y * pitch;
+
+			for (int x = 0; x < surfW; ++x) {
+				int sx = static_cast<int>(x * scaleX);
+				dstRow[x] = srcRow[sx];
+			}
 		}
 	}
+
 
 	static auto __cdecl IsCorrectDiscInserted_Hook() -> int {
 		return 1;
