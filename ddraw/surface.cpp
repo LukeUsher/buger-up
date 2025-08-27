@@ -319,8 +319,9 @@ auto DirectDrawSurfaceImpl::GetPixelFormat(LPDDPIXELFORMAT) -> HRESULT {
     return DD_OK;
 }
 
-auto DirectDrawSurfaceImpl::GetSurfaceDesc(LPDDSURFACEDESC) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] GetSurfaceDesc ignored\n";
+auto DirectDrawSurfaceImpl::GetSurfaceDesc(LPDDSURFACEDESC lpDesc) -> HRESULT {
+    if (!lpDesc) return DDERR_INVALIDPARAMS;
+    *lpDesc = desc;
     return DD_OK;
 }
 

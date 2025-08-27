@@ -163,6 +163,7 @@
     <ClCompile>
       <PreprocessorDefinitions>BUILD_WINMM=1;_DEBUG;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <Optimization>Disabled</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-winmm|Win32'">
@@ -175,6 +176,7 @@
     <ClCompile>
       <PreprocessorDefinitions>BUILD_DDRAW=1;_DEBUG;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <Optimization>Disabled</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-ddraw|Win32'">
@@ -187,6 +189,7 @@
     <ClCompile>
       <PreprocessorDefinitions>BUILD_DSOUND=1;_DEBUG;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <Optimization>Disabled</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-dsound|Win32'">
@@ -199,6 +202,7 @@
     <ClCompile>
       <PreprocessorDefinitions>BUILD_WS2_32=1;_DEBUG;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <Optimization>Disabled</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-ws2_32|Win32'">
@@ -211,6 +215,7 @@
     <ClCompile>
       <PreprocessorDefinitions>BUILD_WING32=1;_DEBUG;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <Optimization>Disabled</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-wing32|Win32'">
@@ -242,6 +247,7 @@
     <ClInclude Include="games\bug-too.h" />
     <ClInclude Include="games\bug.h" />
     <ClInclude Include="games\comix-zone.h" />
+    <ClInclude Include="games\ecco.h" />
     <ClInclude Include="games\games.h" />
     <ClInclude Include="patch-engine.h" />
     <ClInclude Include="pragma\ddraw.h" />

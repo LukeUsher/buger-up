@@ -151,8 +151,9 @@ auto DirectDraw::GetCaps(LPDDCAPS, LPDDCAPS) -> HRESULT {
     return DD_OK;
 }
 
-auto DirectDraw::GetDisplayMode(LPDDSURFACEDESC) -> HRESULT {
-    std::cout << "[DirectDraw1Impl] GetDisplayMode ignored\n";
+auto DirectDraw::GetDisplayMode(LPDDSURFACEDESC lpDesc) -> HRESULT {
+    lpDesc->dwWidth = _displayWidth;
+    lpDesc->dwHeight = _displayHeight;
     return DD_OK;
 }
 
@@ -253,7 +254,7 @@ auto DirectDraw::_findMainWindow() -> HWND
         
         if (windowPID != data->pid) return TRUE;
 
-        if (!IsWindowVisible(hwnd)) return TRUE; 
+        //if (!IsWindowVisible(hwnd)) return TRUE; 
 
         char className[256]{};
         GetClassNameA(hwnd, className, sizeof(className));

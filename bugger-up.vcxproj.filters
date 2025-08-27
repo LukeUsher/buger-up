@@ -71,6 +71,9 @@
     <ClInclude Include="games\comix-zone.h">
       <Filter>games</Filter>
     </ClInclude>
+    <ClInclude Include="games\ecco.h">
+      <Filter>games</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="thirdparty">

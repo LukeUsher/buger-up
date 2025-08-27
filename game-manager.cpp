@@ -39,6 +39,7 @@ auto GameManager::init() -> bool {
 	if (hash == "1ededa0a") _game = std::make_shared<Bug>();
 	if (hash == "b8446528") _game = std::make_shared<BugToo>();
 	if (hash == "96292a69") _game = std::make_shared<ComixZone>();
+	if (hash == "a5bd399b") _game = std::make_shared<Ecco>();
 
 	if (!_game) {
 		MessageBoxA(NULL, hash.c_str(), "Unknown game hash", MB_ICONERROR);
