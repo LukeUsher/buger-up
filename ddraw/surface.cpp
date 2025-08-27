@@ -1,5 +1,4 @@
-﻿#define NOMINMAX
-#include "surface.hpp"
+﻿#include "surface.hpp"
 #include "ddraw.hpp"
 
 DirectDrawSurfaceImpl::~DirectDrawSurfaceImpl() {
@@ -202,7 +201,7 @@ auto DirectDrawSurfaceImpl::Blt(LPRECT dstRect, LPDIRECTDRAWSURFACE lpDDSrc, LPR
         dstR.h = std::min(dstR.h, _surface->h - dstR.y);
 
         //HACK: Assume all surfaces will eventually be blitted to the primary; so make sure all our palettes match
-        if (SDL_BYTESPERPIXEL(_surface->format) == 1 && SDL_BYTESPERPIXEL(src->_surface->format) == 1 && directDraw._primarySurface) {
+        if (SDL_BYTESPERPIXEL(_surface->format) == 1 && SDL_BYTESPERPIXEL(src->_surface->format) == 1 && directDraw._primarySurface && directDraw._primarySurface->_palette) {
             if (src->_palette == nullptr)  SDL_SetSurfacePalette(src->_surface, directDraw._primarySurface->_palette->_palette);
             if (_palette == nullptr)  SDL_SetSurfacePalette(_surface, directDraw._primarySurface->_palette->_palette);
         }
@@ -220,9 +219,26 @@ auto DirectDrawSurfaceImpl::BltBatch(LPDDBLTBATCH, DWORD, DWORD) -> HRESULT {
     return DDERR_UNSUPPORTED;
 }
 
-auto DirectDrawSurfaceImpl::BltFast(DWORD, DWORD, LPDIRECTDRAWSURFACE, LPRECT, DWORD) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] BltFast ignored\n";
-    return DDERR_UNSUPPORTED;
+auto DirectDrawSurfaceImpl::BltFast(DWORD dwX, DWORD dwY, LPDIRECTDRAWSURFACE lpDDSrc, LPRECT srcRect, DWORD dwFlags) -> HRESULT {
+    if (!lpDDSrc) return DDERR_INVALIDPARAMS;
+
+    RECT dstRect{};
+    if (srcRect) {
+        dstRect.left = static_cast<LONG>(dwX);
+        dstRect.top = static_cast<LONG>(dwY);
+        dstRect.right = dwX + (srcRect->right - srcRect->left);
+        dstRect.bottom = dwY + (srcRect->bottom - srcRect->top);
+    }  else {
+        DDSURFACEDESC ddsd{};
+        ddsd.dwSize = sizeof(ddsd);
+        lpDDSrc->GetSurfaceDesc(&ddsd);
+        dstRect.left = dwX;
+        dstRect.top = dwY;
+        dstRect.right = dwX + ddsd.dwWidth;
+        dstRect.bottom = dwY + ddsd.dwHeight;
+    }
+
+    return this->Blt(&dstRect, lpDDSrc, srcRect, dwFlags, nullptr);
 }
 
 auto DirectDrawSurfaceImpl::DeleteAttachedSurface(DWORD, LPDIRECTDRAWSURFACE) -> HRESULT {

@@ -21,6 +21,7 @@
     <ClCompile Include="ddraw\surface.cpp">
       <Filter>ddraw</Filter>
     </ClCompile>
+    <ClCompile Include="wing32.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -63,6 +64,12 @@
     </ClInclude>
     <ClInclude Include="ddraw\surface.hpp">
       <Filter>ddraw</Filter>
+    </ClInclude>
+    <ClInclude Include="pragma\wing32.h">
+      <Filter>pragma</Filter>
+    </ClInclude>
+    <ClInclude Include="games\comix-zone.h">
+      <Filter>games</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

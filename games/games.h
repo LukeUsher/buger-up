@@ -9,6 +9,8 @@
 #include <commctrl.h>
 #include <Shlwapi.h>
 #include <map>
+#include <algorithm>
+#include <utility>
 
 #include "patch-engine.h"
 
@@ -33,3 +35,4 @@ struct Game {
 
 #include "bug.h"
 #include "bug-too.h"
+#include "comix-zone.h"
