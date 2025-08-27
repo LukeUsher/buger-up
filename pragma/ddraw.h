@@ -12,8 +12,6 @@
 #pragma comment(linker,"/export:DirectDrawEnumerateExA=C:\\\\windows\\\\SysWOW64\\\\ddraw.dll.DirectDrawEnumerateExA,@12")
 #pragma comment(linker,"/export:DirectDrawEnumerateExW=C:\\\\windows\\\\SysWOW64\\\\ddraw.dll.DirectDrawEnumerateExW,@13")
 #pragma comment(linker,"/export:DirectDrawEnumerateW=C:\\\\windows\\\\SysWOW64\\\\ddraw.dll.DirectDrawEnumerateW,@14")
-#pragma comment(linker,"/export:DllCanUnloadNow=C:\\\\windows\\\\SysWOW64\\\\ddraw.dll.DllCanUnloadNow,@15")
-#pragma comment(linker,"/export:DllGetClassObject=C:\\\\windows\\\\SysWOW64\\\\ddraw.dll.DllGetClassObject,@16")
 #pragma comment(linker,"/export:GetDDSurfaceLocal=C:\\\\windows\\\\SysWOW64\\\\ddraw.dll.GetDDSurfaceLocal,@17")
 #pragma comment(linker,"/export:GetOLEThunkData=C:\\\\windows\\\\SysWOW64\\\\ddraw.dll.GetOLEThunkData,@18")
 #pragma comment(linker,"/export:GetSurfaceFromDC=C:\\\\windows\\\\SysWOW64\\\\ddraw.dll.GetSurfaceFromDC,@19")

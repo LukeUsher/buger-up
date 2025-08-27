@@ -96,8 +96,8 @@ struct Bug : Game
 		const int realW = 304;
 		const int realH = 232;
 
-		const int copyW = min(surfW, realW);
-		const int copyH = min(surfH, realH);
+		const int copyW = std::min(surfW, realW);
+		const int copyH = std::min(surfH, realH);
 
 		const uint8_t* srcStart = s + srcY * fmvW + srcX;
 

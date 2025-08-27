@@ -1,10 +1,5 @@
 #pragma once
 
-#define BUILD_DDRAW 0
-#define BUILD_WINMM 1
-#define BUILD_DSOUND 0
-#define BUILD_WS2_32 0
-
 #if BUILD_WINMM
 #include "pragma/winmm.h"
 #elif BUILD_DDRAW
@@ -13,12 +8,13 @@
 #include "pragma/dsound.h"
 #elif BUILD_WS2_32
 #include "pragma/ws2_32.h"
+#elif BUILD_WING32
+#include "pragma/wing32.h"
 #else
 #error "Unspecified build mode"
 #endif
 
-
-#include "windows.h"
+#include <Windows.h>
 #include <Psapi.h>
 #include "game-manager.h"
 
@@ -35,7 +31,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 
         if(!gameManager.init())
         {
-            MessageBox(NULL, L"Failed to initialize BuggerUp", L"Fatal Error", MB_ICONERROR);
+            MessageBoxA(NULL, "Failed to initialize BuggerUp", "Fatal Error", MB_ICONERROR);
             ExitProcess(0);
         }
         break;
