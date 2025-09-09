@@ -27,18 +27,6 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="game-manager.h" />
     <ClInclude Include="patch-engine.h" />
-    <ClInclude Include="pragma\ddraw.h">
-      <Filter>pragma</Filter>
-    </ClInclude>
-    <ClInclude Include="pragma\winmm.h">
-      <Filter>pragma</Filter>
-    </ClInclude>
-    <ClInclude Include="pragma\dsound.h">
-      <Filter>pragma</Filter>
-    </ClInclude>
-    <ClInclude Include="pragma\ws2_32.h">
-      <Filter>pragma</Filter>
-    </ClInclude>
     <ClInclude Include="thirdparty\xxhash32.h">
       <Filter>thirdparty</Filter>
     </ClInclude>
@@ -65,25 +53,34 @@
     <ClInclude Include="ddraw\surface.hpp">
       <Filter>ddraw</Filter>
     </ClInclude>
-    <ClInclude Include="pragma\wing32.h">
-      <Filter>pragma</Filter>
-    </ClInclude>
     <ClInclude Include="games\comix-zone.h">
       <Filter>games</Filter>
+    </ClInclude>
+    <ClInclude Include="proxy\dsound.h">
+      <Filter>proxy</Filter>
+    </ClInclude>
+    <ClInclude Include="proxy\winmm.h">
+      <Filter>proxy</Filter>
+    </ClInclude>
+    <ClInclude Include="proxy\ws2_32.h">
+      <Filter>proxy</Filter>
+    </ClInclude>
+    <ClInclude Include="proxy\ddraw.h">
+      <Filter>proxy</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="thirdparty">
       <UniqueIdentifier>{5c20ebac-2c53-4091-a126-9e17dbcfd06b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="pragma">
-      <UniqueIdentifier>{a070592e-db28-4f88-b024-fb9089ecd136}</UniqueIdentifier>
-    </Filter>
     <Filter Include="games">
       <UniqueIdentifier>{c1abc6b2-e37b-4d6e-8ee7-da2325b6fbfa}</UniqueIdentifier>
     </Filter>
     <Filter Include="ddraw">
       <UniqueIdentifier>{c3db3a1f-1ed9-44a2-b43c-8a683ec45afc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="proxy">
+      <UniqueIdentifier>{a73941b0-36a8-4ce1-a352-38b5a990e764}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
