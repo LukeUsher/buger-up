@@ -1,6 +1,7 @@
 #include "winmm-joy.hpp"
 #include <string.h>
- #include "patch-engine.h"
+#include "patch-engine.h"
+#include "logger.hpp"
 
 auto WinmmJoy::applyPatches() -> void {
     patchEngine.PatchImportedFunction("winmm.dll", "joyGetDevCapsA", WinmmJoy::joyGetDevCapsA);
@@ -48,8 +49,23 @@ auto __stdcall WinmmJoy::MapFaceButtons(WORD xb) -> WORD {
 }
 
 auto __stdcall WinmmJoy::joyGetDevCapsA(UINT_PTR uJoyID, LPJOYCAPSA pjc, UINT cbjc) -> MMRESULT {
-    if (!pjc || cbjc < sizeof(JOYCAPSA)) return MMSYSERR_INVALPARAM;
-    if (uJoyID >= 4) return MMSYSERR_NODRIVER;
+    TRACE_FUNC("winmm");
+    TRACE_IN("uJoyID", uJoyID);
+    TRACE_IN("pjc", pjc);
+    TRACE_IN("cbjc", cbjc);
+
+    MMRESULT ret;
+
+    if (!pjc || cbjc < sizeof(JOYCAPSA)) {
+        ret = MMSYSERR_INVALPARAM;
+        TRACE_RET("winmm", ret);
+        return ret;
+    }
+    if (uJoyID >= 4) {
+        ret = MMSYSERR_NODRIVER;
+        TRACE_RET("winmm", ret);
+        return ret;
+    }
 
     ZeroMemory(pjc, cbjc);
     pjc->wMid = 0;
@@ -62,11 +78,35 @@ auto __stdcall WinmmJoy::joyGetDevCapsA(UINT_PTR uJoyID, LPJOYCAPSA pjc, UINT cb
     pjc->wPeriodMin = 0;
     pjc->wPeriodMax = 0;
 
-    return JOYERR_NOERROR;
+    // OUT params
+    TRACE_OUT("pjc", pjc);
+
+    ret = JOYERR_NOERROR;
+    TRACE_RET("winmm", ret);
+    return ret;
+}
+
+auto __stdcall WinmmJoy::joyGetNumDevs() -> UINT {
+    TRACE_FUNC("winmm");
+
+    UINT ret = 4;
+
+    TRACE_RET("winmm", ret);
+    return ret;
 }
 
 auto __stdcall WinmmJoy::joyGetPosEx(UINT uJoyID, LPJOYINFOEX pji) -> MMRESULT {
-    if (uJoyID >= 4) return MMSYSERR_NODRIVER;
+    TRACE_FUNC("winmm");
+    TRACE_IN("uJoyID", uJoyID);
+    TRACE_IN("pji", pji);
+
+    MMRESULT ret;
+
+    if (uJoyID >= 4) {
+        ret = MMSYSERR_NODRIVER;
+        TRACE_RET("winmm", ret);
+        return ret;
+    }
 
     XINPUT_STATE xi{};
     DWORD res = XInputGetState(uJoyID, &xi);
@@ -78,7 +118,10 @@ auto __stdcall WinmmJoy::joyGetPosEx(UINT uJoyID, LPJOYINFOEX pji) -> MMRESULT {
         LONG ly = xi.Gamepad.sThumbLY;
 
         if (dpadMode == DpadMode::Axis || dpadMode == DpadMode::Both) {
-            if (xi.Gamepad.wButtons & (XINPUT_GAMEPAD_DPAD_LEFT | XINPUT_GAMEPAD_DPAD_RIGHT | XINPUT_GAMEPAD_DPAD_UP | XINPUT_GAMEPAD_DPAD_DOWN)) {
+            if (xi.Gamepad.wButtons & (XINPUT_GAMEPAD_DPAD_LEFT |
+                XINPUT_GAMEPAD_DPAD_RIGHT |
+                XINPUT_GAMEPAD_DPAD_UP |
+                XINPUT_GAMEPAD_DPAD_DOWN)) {
                 lx = 0;
                 ly = 0;
                 if (xi.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT)  lx = -32768;
@@ -106,6 +149,7 @@ auto __stdcall WinmmJoy::joyGetPosEx(UINT uJoyID, LPJOYINFOEX pji) -> MMRESULT {
 
         if ((dpadMode == DpadMode::POV || dpadMode == DpadMode::Both) &&
             (pji->dwFlags & JOY_RETURNPOV)) {
+
             WORD b = xi.Gamepad.wButtons;
             if (b & XINPUT_GAMEPAD_DPAD_UP) {
                 if (b & XINPUT_GAMEPAD_DPAD_RIGHT) pji->dwPOV = 4500;
@@ -131,19 +175,32 @@ auto __stdcall WinmmJoy::joyGetPosEx(UINT uJoyID, LPJOYINFOEX pji) -> MMRESULT {
         pji->dwPOV = JOY_POVCENTERED;
     }
 
-    return JOYERR_NOERROR;
-}
+    TRACE_OUT("pji", pji);
 
-auto __stdcall WinmmJoy::joyGetNumDevs() -> UINT {
-    return 4;
+    ret = JOYERR_NOERROR;
+    TRACE_RET("winmm", ret);
+    return ret;
 }
 
 auto __stdcall WinmmJoy::joySetCapture(HWND hwnd, UINT uJoyID, UINT uPeriod, BOOL fChanged) -> MMRESULT {
-    if (uJoyID >= 4) return MMSYSERR_NODRIVER;
+    TRACE_FUNC("winmm");
+    TRACE_IN("hwnd", hwnd);
+    TRACE_IN("uJoyID", uJoyID);
+    TRACE_IN("uPeriod", uPeriod);
+    TRACE_IN("fChanged", fChanged);
+
+    MMRESULT ret;
+
+    if (uJoyID >= 4) {
+        ret = MMSYSERR_NODRIVER;
+        TRACE_RET("winmm", ret);
+        return ret;
+    }
 
     if (captures.count(uJoyID)) {
         captures[uJoyID].active = false;
-        if (captures[uJoyID].pollThread.joinable()) captures[uJoyID].pollThread.join();
+        if (captures[uJoyID].pollThread.joinable())
+            captures[uJoyID].pollThread.join();
     }
 
     JoyCapture& capture = captures[uJoyID];
@@ -153,13 +210,30 @@ auto __stdcall WinmmJoy::joySetCapture(HWND hwnd, UINT uJoyID, UINT uPeriod, BOO
     capture.active = true;
     capture.pollThread = std::thread(PollJoystick, &capture);
 
-    return JOYERR_NOERROR;
+    ret = JOYERR_NOERROR;
+    TRACE_RET("winmm", ret);
+    return ret;
 }
 
 auto __stdcall WinmmJoy::joySetThreshold(UINT uJoyID, UINT uThreshold) -> UINT {
-    if (uJoyID >= 4) return MMSYSERR_NODRIVER;
-    if (captures.count(uJoyID)) captures[uJoyID].threshold = uThreshold;
-    return JOYERR_NOERROR;
+    TRACE_FUNC("winmm");
+    TRACE_IN("uJoyID", uJoyID);
+    TRACE_IN("uThreshold", uThreshold);
+
+    UINT ret;
+
+    if (uJoyID >= 4) {
+        ret = MMSYSERR_NODRIVER;
+        TRACE_RET("winmm", ret);
+        return ret;
+    }
+
+    if (captures.count(uJoyID))
+        captures[uJoyID].threshold = uThreshold;
+
+    ret = JOYERR_NOERROR;
+    TRACE_RET("winmm", ret);
+    return ret;
 }
 
 auto WinmmJoy::PollJoystick(JoyCapture* capture) -> void {

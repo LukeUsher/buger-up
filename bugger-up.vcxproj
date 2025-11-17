@@ -243,6 +243,7 @@
     <ClInclude Include="games\bug.h" />
     <ClInclude Include="games\comix-zone.h" />
     <ClInclude Include="games\games.h" />
+    <ClInclude Include="logger.hpp" />
     <ClInclude Include="patch-engine.h" />
     <ClInclude Include="proxy\ddraw.h" />
     <ClInclude Include="proxy\dsound.h" />

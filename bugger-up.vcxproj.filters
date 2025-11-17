@@ -68,6 +68,7 @@
     <ClInclude Include="proxy\ddraw.h">
       <Filter>proxy</Filter>
     </ClInclude>
+    <ClInclude Include="logger.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="thirdparty">

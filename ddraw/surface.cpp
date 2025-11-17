@@ -1,5 +1,6 @@
 ﻿#include "surface.hpp"
 #include "ddraw.hpp"
+#include "../logger.hpp"
 
 DirectDrawSurfaceImpl::~DirectDrawSurfaceImpl() {
     if (_surface) SDL_DestroySurface(_surface);
@@ -8,27 +9,62 @@ DirectDrawSurfaceImpl::~DirectDrawSurfaceImpl() {
 }
 
 auto DirectDrawSurfaceImpl::QueryInterface(REFIID riid, void** ppvObject) -> HRESULT {
-    if (!ppvObject) return E_POINTER;
+    TRACE_FUNC("ddraw");
+
+    TRACE_IN("riid", &riid);
+    TRACE_IN("ppvObject", ppvObject);
+
+    HRESULT hr = S_OK;
+
+    if (!ppvObject) {
+        hr = E_POINTER;
+        TRACE_RET("ddraw", hr);
+        return hr;
+    }
+
     *ppvObject = nullptr;
     if (riid == IID_IUnknown || riid == IID_IDirectDrawSurface) {
         *ppvObject = this;
         AddRef();
-        return S_OK;
+    } else {
+        hr = E_NOINTERFACE;
     }
-    return E_NOINTERFACE;
+
+    TRACE_OUT("ppvObject", ppvObject);
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::Create(LPDDSURFACEDESC desc, IDirectDrawSurface** outSurface) -> HRESULT {
-    if (!desc || !outSurface) return DDERR_INVALIDPARAMS;
+    TRACE_FUNC("ddraw");
+
+    TRACE_IN("desc", desc);
+    TRACE_IN("outSurface", outSurface);
+
+    HRESULT hr = DD_OK;
+
+    if (!desc || !outSurface) {
+        hr = DDERR_INVALIDPARAMS;
+        TRACE_RET("ddraw", hr);
+        return hr;
+    }
 
     // Bug! tries to create a surface in the zero page; this seems to be a mistake because it never checks for success or uses it
-    if ((uintptr_t)outSurface < 0x1000) return DDERR_INVALIDPARAMS;
+    if ((uintptr_t)outSurface < 0x1000) {
+        hr = DDERR_INVALIDPARAMS;
+        TRACE_RET("ddraw", hr);
+        return hr;
+    }
 
     if (desc->ddsCaps.dwCaps & DDSCAPS_PRIMARYSURFACE) {
-        //TODO: move to directDraw.createPrimarySurface
+        // TODO: move to directDraw.createPrimarySurface
         if (!directDraw._primarySurface) {
             DirectDrawSurfaceImpl* primary = new DirectDrawSurfaceImpl();
-            if (!primary) return DDERR_OUTOFMEMORY;
+            if (!primary) {
+                hr = DDERR_OUTOFMEMORY;
+                TRACE_RET("ddraw", hr);
+                return hr;
+            }
 
             primary->isPrimary = true;
 
@@ -37,45 +73,61 @@ auto DirectDrawSurfaceImpl::Create(LPDDSURFACEDESC desc, IDirectDrawSurface** ou
             primary->desc.dwWidth = directDraw._displayWidth;
             primary->desc.dwHeight = directDraw._displayHeight;
             primary->desc.ddpfPixelFormat.dwSize = sizeof(DDPIXELFORMAT);
-            primary->desc.ddpfPixelFormat.dwFlags = DDPF_PALETTEINDEXED8; //TODO: Don't hardcode, use SetDisplayMode if it was called
+            primary->desc.ddpfPixelFormat.dwFlags = DDPF_PALETTEINDEXED8; // TODO: Don't hardcode, use SetDisplayMode if it was called
             primary->desc.ddpfPixelFormat.dwRGBBitCount = 8;
             primary->desc.ddpfPixelFormat.dwRBitMask = 0;
             primary->desc.ddpfPixelFormat.dwGBitMask = 0;
             primary->desc.ddpfPixelFormat.dwBBitMask = 0;
             primary->desc.ddpfPixelFormat.dwRGBAlphaBitMask = 0;
             primary->desc.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE;
+
             primary->_surface = SDL_CreateSurface(primary->desc.dwWidth, primary->desc.dwHeight, SDL_PIXELFORMAT_INDEX8);
             if (!primary->_surface) {
                 delete primary;
-                return DDERR_INVALIDPIXELFORMAT;
+                hr = DDERR_INVALIDPIXELFORMAT;
+                TRACE_RET("ddraw", hr);
+                return hr;
             }
 
             if (desc->ddsCaps.dwCaps & DDSCAPS_FLIP) {
                 DirectDrawSurfaceImpl* bb = new DirectDrawSurfaceImpl();
+                if (!bb) {
+                    delete primary;
+                    hr = DDERR_OUTOFMEMORY;
+                    TRACE_RET("ddraw", hr);
+                    return hr;
+                }
+
                 bb->desc = primary->desc;
                 bb->_surface = SDL_CreateSurface(primary->desc.dwWidth, primary->desc.dwHeight, SDL_PIXELFORMAT_INDEX8);
                 if (!bb->_surface) {
                     delete bb;
                     delete primary;
-                    return DDERR_OUTOFMEMORY;
+                    hr = DDERR_OUTOFMEMORY;
+                    TRACE_RET("ddraw", hr);
+                    return hr;
                 }
                 primary->_backbuffer = bb;
             }
 
             directDraw._primarySurface = primary;
- 
         }
 
         *outSurface = directDraw._primarySurface;
 
         SDL_SetWindowFullscreen(directDraw._window, (directDraw._cooperativeLevel & DDSCL_FULLSCREEN) != 0);
 
-
-        return DD_OK;
+        TRACE_OUT("outSurface", outSurface);
+        TRACE_RET("ddraw", hr);
+        return hr;
     }
 
     DirectDrawSurfaceImpl* s = new DirectDrawSurfaceImpl();
-    if (!s) return DDERR_OUTOFMEMORY;
+    if (!s) {
+        hr = DDERR_OUTOFMEMORY;
+        TRACE_RET("ddraw", hr);
+        return hr;
+    }
 
     s->desc = *desc;
     s->desc.dwSize = sizeof(DDSURFACEDESC);
@@ -83,57 +135,80 @@ auto DirectDrawSurfaceImpl::Create(LPDDSURFACEDESC desc, IDirectDrawSurface** ou
     auto sdlFormat = SDL_PIXELFORMAT_UNKNOWN;
     if (s->desc.dwFlags & DDSD_PIXELFORMAT) {
         switch (s->desc.ddpfPixelFormat.dwRGBBitCount) {
-            case 8:  sdlFormat = SDL_PIXELFORMAT_INDEX8; break;
-            case 16: sdlFormat = SDL_PIXELFORMAT_RGB565; break;
-            case 24: sdlFormat = SDL_PIXELFORMAT_RGB24; break;
-            case 32: sdlFormat = SDL_PIXELFORMAT_ABGR8888; break;
-            default: sdlFormat = SDL_PIXELFORMAT_INDEX8;
+        case 8:  sdlFormat = SDL_PIXELFORMAT_INDEX8;   break;
+        case 16: sdlFormat = SDL_PIXELFORMAT_RGB565;   break;
+        case 24: sdlFormat = SDL_PIXELFORMAT_RGB24;    break;
+        case 32: sdlFormat = SDL_PIXELFORMAT_ABGR8888; break;
+        default: sdlFormat = SDL_PIXELFORMAT_INDEX8;   break;
         }
     } else {
         sdlFormat = SDL_PIXELFORMAT_INDEX8;
     }
 
     s->_surface = SDL_CreateSurface(s->desc.dwWidth, s->desc.dwHeight, sdlFormat);
-
     if (!s->_surface) {
         delete s;
-        return DDERR_OUTOFMEMORY;
+        hr = DDERR_OUTOFMEMORY;
+        TRACE_RET("ddraw", hr);
+        return hr;
     }
 
     s->desc.ddpfPixelFormat.dwRGBBitCount = SDL_BITSPERPIXEL(sdlFormat);
 
-    if (!s->_surface) {
-        delete s;
-        return DDERR_OUTOFMEMORY;
-    }
-
     *outSurface = s;
-    return DD_OK;
+
+    TRACE_OUT("outSurface", outSurface);
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::AddRef() -> ULONG {
-    return ++refCount;
+    TRACE_FUNC("ddraw");
+    refCount++;
+    TRACE_RET("ddraw", refCount);
+    return refCount;
 }
 
 auto DirectDrawSurfaceImpl::Release() -> ULONG {
-    ULONG count = --refCount;
+    TRACE_FUNC("ddraw");
+    refCount--;
+    ULONG count = refCount;
+    TRACE_RET("ddraw", count);
     if (count == 0) delete this;
     return count;
 }
 
 auto DirectDrawSurfaceImpl::AddAttachedSurface(LPDIRECTDRAWSURFACE) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] AddAttachedSurface ignored\n";
-    return DDERR_UNSUPPORTED;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DDERR_UNSUPPORTED;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::AddOverlayDirtyRect(LPRECT) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] AddOverlayDirtyRect ignored\n";
-    return DDERR_UNSUPPORTED;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DDERR_UNSUPPORTED;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::Blt(LPRECT dstRect, LPDIRECTDRAWSURFACE lpDDSrc, LPRECT srcRect, DWORD dwFlags, LPDDBLTFX lpDDBltFX) -> HRESULT {
-    if (!_surface) return DD_OK;
- 
+    TRACE_FUNC("ddraw");
+
+    TRACE_IN("dstRect", dstRect);
+    TRACE_IN("lpDDSrc", lpDDSrc);
+    TRACE_IN("srcRect", srcRect);
+    TRACE_IN("dwFlags", dwFlags);
+    TRACE_IN("lpDDBltFX", lpDDBltFX);
+
+    HRESULT hr = DD_OK;
+
+    if (!_surface) {
+        hr = DD_OK;
+        TRACE_RET("ddraw", hr);
+        return hr;
+    }
+
     if ((dwFlags & DDBLT_COLORFILL) && lpDDBltFX) {
         SDL_LockSurface(_surface);
         uint8_t* pixels = (Uint8*)_surface->pixels;
@@ -177,7 +252,7 @@ auto DirectDrawSurfaceImpl::Blt(LPRECT dstRect, LPDIRECTDRAWSURFACE lpDDSrc, LPR
         }
 
         SDL_UnlockSurface(_surface);
-     }
+    }
 
     if (lpDDSrc) {
         DirectDrawSurfaceImpl* src = static_cast<DirectDrawSurfaceImpl*>(lpDDSrc);
@@ -206,21 +281,46 @@ auto DirectDrawSurfaceImpl::Blt(LPRECT dstRect, LPDIRECTDRAWSURFACE lpDDSrc, LPR
             if (_palette == nullptr)  SDL_SetSurfacePalette(_surface, directDraw._primarySurface->_palette->_palette);
         }
 
-        if (!SDL_BlitSurfaceScaled(src->_surface, &srcR, _surface, &dstR, SDL_SCALEMODE_LINEAR)) return DDERR_INVALIDPIXELFORMAT;
+        if (!SDL_BlitSurfaceScaled(src->_surface, &srcR, _surface, &dstR, SDL_SCALEMODE_LINEAR)) {
+            hr = DDERR_INVALIDPIXELFORMAT;
+            TRACE_RET("ddraw", hr);
+            return hr;
+        }
     }
 
-    if (isPrimary && !directDraw.flipPrimary()) return DDERR_INCOMPATIBLEPRIMARY;
-    return DD_OK;
+    if (isPrimary && !directDraw.flipPrimary()) {
+        hr = DDERR_INCOMPATIBLEPRIMARY;
+        TRACE_RET("ddraw", hr);
+        return hr;
+    }
+
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
-
 auto DirectDrawSurfaceImpl::BltBatch(LPDDBLTBATCH, DWORD, DWORD) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] BltBatch ignored\n";
-    return DDERR_UNSUPPORTED;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DDERR_UNSUPPORTED;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::BltFast(DWORD dwX, DWORD dwY, LPDIRECTDRAWSURFACE lpDDSrc, LPRECT srcRect, DWORD dwFlags) -> HRESULT {
-    if (!lpDDSrc) return DDERR_INVALIDPARAMS;
+    TRACE_FUNC("ddraw");
+
+    TRACE_IN("dwX", dwX);
+    TRACE_IN("dwY", dwY);
+    TRACE_IN("lpDDSrc", lpDDSrc);
+    TRACE_IN("srcRect", srcRect);
+    TRACE_IN("dwFlags", dwFlags);
+
+    HRESULT hr = DD_OK;
+
+    if (!lpDDSrc) {
+        hr = DDERR_INVALIDPARAMS;
+        TRACE_RET("ddraw", hr);
+        return hr;
+    }
 
     RECT dstRect{};
     if (srcRect) {
@@ -228,7 +328,7 @@ auto DirectDrawSurfaceImpl::BltFast(DWORD dwX, DWORD dwY, LPDIRECTDRAWSURFACE lp
         dstRect.top = static_cast<LONG>(dwY);
         dstRect.right = dwX + (srcRect->right - srcRect->left);
         dstRect.bottom = dwY + (srcRect->bottom - srcRect->top);
-    }  else {
+    } else {
         DDSURFACEDESC ddsd{};
         ddsd.dwSize = sizeof(ddsd);
         lpDDSrc->GetSurfaceDesc(&ddsd);
@@ -238,110 +338,186 @@ auto DirectDrawSurfaceImpl::BltFast(DWORD dwX, DWORD dwY, LPDIRECTDRAWSURFACE lp
         dstRect.bottom = dwY + ddsd.dwHeight;
     }
 
-    return this->Blt(&dstRect, lpDDSrc, srcRect, dwFlags, nullptr);
+    hr = this->Blt(&dstRect, lpDDSrc, srcRect, dwFlags, nullptr);
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::DeleteAttachedSurface(DWORD, LPDIRECTDRAWSURFACE) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] DeleteAttachedSurface ignored\n";
-    return DDERR_UNSUPPORTED;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DDERR_UNSUPPORTED;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::EnumAttachedSurfaces(LPVOID, LPDDENUMSURFACESCALLBACK) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] EnumAttachedSurfaces ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::EnumOverlayZOrders(DWORD, LPVOID, LPDDENUMSURFACESCALLBACK) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] EnumOverlayZOrders ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::Flip(LPDIRECTDRAWSURFACE, DWORD) -> HRESULT {
-    if (!isPrimary) return DDERR_NOTFLIPPABLE;
-    if (!_backbuffer || !_surface) return DDERR_NOTFLIPPABLE;
+    TRACE_FUNC("ddraw");
 
-    if (!SDL_BlitSurface(_backbuffer->_surface, nullptr, _surface, nullptr)) return DDERR_INCOMPATIBLEPRIMARY;
+    HRESULT hr = DD_OK;
 
-    if (!directDraw.flipPrimary()) return DDERR_INCOMPATIBLEPRIMARY;
-    return DD_OK;
+    if (!isPrimary || !_backbuffer || !_surface) {
+        hr = DDERR_NOTFLIPPABLE;
+        TRACE_RET("ddraw", hr);
+        return hr;
+    }
+
+    if (!SDL_BlitSurface(_backbuffer->_surface, nullptr, _surface, nullptr)) {
+        hr = DDERR_INCOMPATIBLEPRIMARY;
+        TRACE_RET("ddraw", hr);
+        return hr;
+    }
+
+    if (!directDraw.flipPrimary()) {
+        hr = DDERR_INCOMPATIBLEPRIMARY;
+        TRACE_RET("ddraw", hr);
+        return hr;
+    }
+
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::GetAttachedSurface(LPDDSCAPS /*caps*/, LPDIRECTDRAWSURFACE* ppSurface) -> HRESULT {
-    if (!ppSurface) return E_POINTER;
-    if (!isPrimary || !_backbuffer) return DDERR_NOTFOUND;
+    TRACE_FUNC("ddraw");
+
+    TRACE_IN("ppSurface", ppSurface);
+
+    HRESULT hr = DD_OK;
+
+    if (!ppSurface) {
+        hr = E_POINTER;
+        TRACE_RET("ddraw", hr);
+        return hr;
+    }
+
+    if (!isPrimary || !_backbuffer) {
+        hr = DDERR_NOTFOUND;
+        TRACE_RET("ddraw", hr);
+        return hr;
+    }
+
     *ppSurface = _backbuffer;
     _backbuffer->AddRef();
-    return DD_OK;
+
+    TRACE_OUT("ppSurface", ppSurface);
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::GetBltStatus(DWORD) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] GetBltStatus ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::GetCaps(LPDDSCAPS) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] GetCaps ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::GetClipper(LPDIRECTDRAWCLIPPER*) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] GetClipper ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::GetColorKey(DWORD, LPDDCOLORKEY) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] GetColorKey ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::GetDC(HDC*) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] GetDC ignored\n";
-    return DDERR_UNSUPPORTED;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DDERR_UNSUPPORTED;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::GetFlipStatus(DWORD) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] GetFlipStatus ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::GetOverlayPosition(LPLONG, LPLONG) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] GetOverlayPosition ignored\n";
-    return DDERR_UNSUPPORTED;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DDERR_UNSUPPORTED;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::GetPalette(LPDIRECTDRAWPALETTE*) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] GetPalette ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::GetPixelFormat(LPDDPIXELFORMAT) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] GetPixelFormat ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::GetSurfaceDesc(LPDDSURFACEDESC) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] GetSurfaceDesc ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::Initialize(LPDIRECTDRAW, LPDDSURFACEDESC) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] Initialize ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::IsLost() -> HRESULT {
-    //std::cout << "[DirectDrawSurfaceImpl] IsLost ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::Lock(LPRECT pRect, LPDDSURFACEDESC pSurfaceDesc, DWORD dwFlags, HANDLE) -> HRESULT {
-    if (!pSurfaceDesc) return DDERR_INVALIDPARAMS;
-    if (!_surface) return DDERR_INVALIDPARAMS;
+    TRACE_FUNC("ddraw");
+
+    TRACE_IN("pRect", pRect);
+    TRACE_IN("pSurfaceDesc", pSurfaceDesc);
+    TRACE_IN("dwFlags", dwFlags);
+
+    HRESULT hr = DD_OK;
+
+    if (!pSurfaceDesc || !_surface) {
+        hr = DDERR_INVALIDPARAMS;
+        TRACE_RET("ddraw", hr);
+        return hr;
+    }
 
     *pSurfaceDesc = desc;
-
-    void* pixelsPtr = nullptr;
-    int pitch = 0;
 
     SDL_Rect rect;
     if (pRect) {
@@ -353,70 +529,122 @@ auto DirectDrawSurfaceImpl::Lock(LPRECT pRect, LPDDSURFACEDESC pSurfaceDesc, DWO
         rect = { 0, 0, (int)desc.dwWidth, (int)desc.dwHeight };
     }
 
-    if(!SDL_LockSurface(_surface)) return DDERR_GENERIC;
+    if (!SDL_LockSurface(_surface)) {
+        hr = DDERR_GENERIC;
+        TRACE_RET("ddraw", hr);
+        return hr;
+    }
 
     uint8_t* pixels = static_cast<uint8_t*>(_surface->pixels);
-    if (pRect) pixels += rect.y * _surface->pitch + rect.x * SDL_BYTESPERPIXEL(_surface->format);
+    if (pRect)
+        pixels += rect.y * _surface->pitch + rect.x * SDL_BYTESPERPIXEL(_surface->format);
 
     pSurfaceDesc->lpSurface = pixels;
     pSurfaceDesc->lPitch = _surface->pitch;
 
-    return DD_OK;
+    TRACE_OUT("pSurfaceDesc", pSurfaceDesc);
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
-
 auto DirectDrawSurfaceImpl::ReleaseDC(HDC) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] ReleaseDC ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::Restore() -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] Restore ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::SetClipper(LPDIRECTDRAWCLIPPER) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] SetClipper ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::SetColorKey(DWORD, LPDDCOLORKEY) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] SetColorKey ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::SetOverlayPosition(LONG, LONG) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] SetOverlayPosition ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::SetPalette(LPDIRECTDRAWPALETTE lpDDPalette) -> HRESULT {
-    if (!lpDDPalette) return DDERR_INVALIDPARAMS;
+    TRACE_FUNC("ddraw");
+
+    TRACE_IN("lpDDPalette", lpDDPalette);
+
+    HRESULT hr = DD_OK;
+
+    if (!lpDDPalette) {
+        hr = DDERR_INVALIDPARAMS;
+        TRACE_RET("ddraw", hr);
+        return hr;
+    }
+
     _palette = static_cast<DirectDrawPaletteImpl*>(lpDDPalette);
     SDL_SetSurfacePalette(_surface, _palette->_palette);
 
-    if (isPrimary && _backbuffer && _backbuffer->_surface) SDL_SetSurfacePalette(_backbuffer->_surface, _palette->_palette);
-    return DD_OK;
+    if (isPrimary && _backbuffer && _backbuffer->_surface)
+        SDL_SetSurfacePalette(_backbuffer->_surface, _palette->_palette);
+
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::Unlock(LPVOID) -> HRESULT {
-    if (!_surface) return DDERR_INVALIDPARAMS;
+    TRACE_FUNC("ddraw");
+
+    HRESULT hr = DD_OK;
+
+    if (!_surface) {
+        hr = DDERR_INVALIDPARAMS;
+        TRACE_RET("ddraw", hr);
+        return hr;
+    }
+
     SDL_UnlockSurface(_surface);
-    if (isPrimary && !directDraw.flipPrimary()) return DDERR_INCOMPATIBLEPRIMARY;
-    return DD_OK;
+
+    if (isPrimary && !directDraw.flipPrimary()) {
+        hr = DDERR_INCOMPATIBLEPRIMARY;
+        TRACE_RET("ddraw", hr);
+        return hr;
+    }
+
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::UpdateOverlay(LPRECT, LPDIRECTDRAWSURFACE, LPRECT, DWORD, LPDDOVERLAYFX) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] UpdateOverlay ignored\n";
-    return DDERR_UNSUPPORTED;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DDERR_UNSUPPORTED;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::UpdateOverlayDisplay(DWORD) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] UpdateOverlayDisplay ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }
 
 auto DirectDrawSurfaceImpl::UpdateOverlayZOrder(DWORD, LPDIRECTDRAWSURFACE) -> HRESULT {
-    std::cout << "[DirectDrawSurfaceImpl] UpdateOverlayZOrder ignored\n";
-    return DD_OK;
+    TRACE_FUNC("ddraw");
+    HRESULT hr = DD_OK;
+    TRACE_RET("ddraw", hr);
+    return hr;
 }

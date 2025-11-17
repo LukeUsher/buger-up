@@ -41,15 +41,14 @@ auto GameManager::init() -> bool {
 	if (hash == "96292a69") _game = std::make_shared<ComixZone>();
 
 	if (!_game) {
-		MessageBoxA(NULL, hash.c_str(), "Unknown game hash", MB_ICONERROR);
-		return false;
+		printf("Unknown game hash: %s: generic patches only!\n", hash.c_str());
 	}
 
 	// Apply any generic patches
 	WinmmJoy::applyPatches();
 	DirectDraw::applyPatches();
 	
-	if (!_game->applyPatches(hash)) {
+	if (_game && !_game->applyPatches(hash)) {
 		MessageBoxA(NULL, hash.c_str(), "Failed to apply game patches", MB_ICONERROR);
 		return false;
 	}
