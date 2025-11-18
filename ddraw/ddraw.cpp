@@ -270,16 +270,16 @@ auto DirectDraw::FlipToGDISurface() -> HRESULT {
 }
 
 
-auto DirectDraw::GetCaps(LPDDCAPS caps1, LPDDCAPS caps2) -> HRESULT {
+auto DirectDraw::GetCaps(LPDDCAPS lpDDDriverCaps, LPDDCAPS lpDDHELCaps) -> HRESULT {
     TRACE_FUNC("ddraw");
 
-    TRACE_IN("caps1", caps1);
-    TRACE_IN("caps2", caps2);
+    TRACE_IN("lpDDDriverCaps", lpDDDriverCaps);
+    TRACE_IN("lpDDHELCaps", lpDDHELCaps);
 
     HRESULT hr = DD_OK;
 
-    TRACE_OUT("caps1", caps1);
-    TRACE_OUT("caps2", caps2);
+    TRACE_OUT("lpDDDriverCaps", lpDDDriverCaps);
+    TRACE_OUT("lpDDHELCaps", lpDDHELCaps);
     TRACE_RET("ddraw", hr);
     return hr;
 }
@@ -296,16 +296,16 @@ auto DirectDraw::GetDisplayMode(LPDDSURFACEDESC lpDDSD) -> HRESULT {
     return hr;
 }
 
-auto DirectDraw::GetFourCCCodes(LPDWORD a, LPDWORD b) -> HRESULT {
+auto DirectDraw::GetFourCCCodes(LPDWORD lpNumCodes, LPDWORD lpCodes) -> HRESULT {
     TRACE_FUNC("ddraw");
 
-    TRACE_IN("a", a);
-    TRACE_IN("b", b);
+    TRACE_IN("lpNumCodes", lpNumCodes);
+    TRACE_IN("lpCodes", lpCodes);
 
     HRESULT hr = DD_OK;
 
-    TRACE_OUT("a", a);
-    TRACE_OUT("b", b);
+    TRACE_OUT("lpNumCodes", lpNumCodes);
+    TRACE_OUT("lpCodes", lpCodes);
     TRACE_RET("ddraw", hr);
     return hr;
 }
