@@ -275,13 +275,18 @@ auto DirectDrawSurfaceImpl::Blt(LPRECT dstRect, LPDIRECTDRAWSURFACE lpDDSrc, LPR
         dstR.w = std::min(dstR.w, _surface->w - dstR.x);
         dstR.h = std::min(dstR.h, _surface->h - dstR.y);
 
-        //HACK: Assume all surfaces will eventually be blitted to the primary; so make sure all our palettes match
+		//If both services are 8bpp paletted use StretchSurface instead of BlitSurfaceScaled to avoid expensive per-pixel colour lookups
         if (SDL_BYTESPERPIXEL(_surface->format) == 1 && SDL_BYTESPERPIXEL(src->_surface->format) == 1 && directDraw._primarySurface && directDraw._primarySurface->_palette) {
+            //HACK: Assume all surfaces will eventually be blitted to the primary; so make sure all our palettes match
             if (src->_palette == nullptr)  SDL_SetSurfacePalette(src->_surface, directDraw._primarySurface->_palette->_palette);
             if (_palette == nullptr)  SDL_SetSurfacePalette(_surface, directDraw._primarySurface->_palette->_palette);
-        }
 
-        if (!SDL_BlitSurfaceScaled(src->_surface, &srcR, _surface, &dstR, SDL_SCALEMODE_LINEAR)) {
+            if (!SDL_StretchSurface(src->_surface, &srcR, _surface, &dstR, SDL_SCALEMODE_NEAREST)) {
+                hr = DDERR_INVALIDPIXELFORMAT;
+                TRACE_RET("ddraw", hr);
+                return hr;
+            }
+        } else if (!SDL_BlitSurfaceScaled(src->_surface, &srcR, _surface, &dstR, SDL_SCALEMODE_LINEAR)) {
             hr = DDERR_INVALIDPIXELFORMAT;
             TRACE_RET("ddraw", hr);
             return hr;
