@@ -1,8 +1,5 @@
 struct Bug : Game
 {
-	using DirectDrawCreate_t = HRESULT(__stdcall*)(GUID*, LPDIRECTDRAW*, IUnknown*);
-	inline static DirectDrawCreate_t _DirectDrawCreate = nullptr;
-
 	inline static std::string _GameDirectory = "";
 
 	auto applyPatches(std::string hash) -> bool override {
