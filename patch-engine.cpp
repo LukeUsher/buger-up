@@ -46,6 +46,10 @@ auto PatchEngine::InjectCall(uintptr_t target, void* detour) -> void
 	DWORD oldProtect, tmp;
 	VirtualProtect((void*)target, 5, PAGE_READWRITE, &oldProtect);
 	uint8_t* FuncBytes = (uint8_t*)target;
+
+	// Automatically NOP leftover bytes if we are overwriting FF 15, allowing replacing indirect calls with direct calls
+	if (((uint8_t*)target)[0] == 0xFF && ((uint8_t*)target)[1] == 0x15) FuncBytes[5] = 0x90;
+
 	FuncBytes[0] = 0xE8;
 	*(uint32_t*)&FuncBytes[1] = (uint32_t)detour - (uint32_t)target - 5;
 	VirtualProtect((void*)target, 5, oldProtect, &tmp);
