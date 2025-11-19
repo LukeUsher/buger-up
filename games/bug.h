@@ -25,9 +25,6 @@ struct Bug : Game
 		//Skip FMV out of bounds memset
 		patchEngine.PatchBinary(0x00411506, { 0x90, 0x90 });
 
-		//Prevent the game from setting the system palette, force it to set DDRAW palette instead
-		patchEngine.PatchBinary(0x00416697, { 0x90, 0x90 });
-
 		//NoCD:Hook IsCorrectDiscInserted to always return true
 		patchEngine.PatchFunction("IsCorrectDiscInserted", 0x00411300, IsCorrectDiscInserted_Hook);
 
@@ -72,44 +69,42 @@ struct Bug : Game
 	}
 
 	static auto __stdcall FMV_CopyBuffer(uint8_t* srcBuffer) -> void {
-		DDSURFACEDESC* fmvSurfaceDesc = (DDSURFACEDESC*)0x5244E0;
+		auto fmvSurfaceDesc = reinterpret_cast<DDSURFACEDESC*>(0x5244E0);
 
 		if (!srcBuffer) return;
 		if (!fmvSurfaceDesc->lpSurface || fmvSurfaceDesc->lPitch <= 0) return;
 
-		uint8_t* dst = static_cast<uint8_t*>(fmvSurfaceDesc->lpSurface);
+		auto dst = static_cast<uint8_t*>(fmvSurfaceDesc->lpSurface);
 
-		const int surfW = fmvSurfaceDesc->dwWidth;
-		const int surfH = fmvSurfaceDesc->dwHeight;
-		const int pitch = fmvSurfaceDesc->lPitch;
+		auto surfW = fmvSurfaceDesc->dwWidth;
+		auto surfH = fmvSurfaceDesc->dwHeight;
+		auto pitch = fmvSurfaceDesc->lPitch;
 
-		const int fmvW = 320;
-		const int fmvH = 240;
+		auto fmvW = 320;
+		auto fmvH = 240;
 
 		//Prevent rendering off-centre
-		const int srcX = 8;
-		const int srcY = 8;
-		const int realW = 304;
-		const int realH = 232;
+		auto srcX = 8;
+		auto srcY = 8;
+		auto realW = 304;
+		auto realH = 232;
 
-		const uint8_t* srcStart = srcBuffer + srcY * fmvW + srcX;
+		auto srcStart = srcBuffer + srcY * fmvW + srcX;
 
-		const float scaleX = static_cast<float>(realW) / static_cast<float>(surfW);
-		const float scaleY = static_cast<float>(realH) / static_cast<float>(surfH);
+		auto scaleX = static_cast<float>(realW) / static_cast<float>(surfW);
+		auto scaleY = static_cast<float>(realH) / static_cast<float>(surfH);
 
-		for (int y = 0; y < surfH; ++y) {
-			int sy = static_cast<int>(y * scaleY);
-			const uint8_t* srcRow = srcStart + sy * fmvW;
+		for (auto y = 0u; y < surfH; ++y) {
+			auto sy = static_cast<int>(y * scaleY);
+			auto srcRow = srcStart + sy * fmvW;
+            auto dstRow = dst + y * pitch;
 
-			uint8_t* dstRow = dst + y * pitch;
-
-			for (int x = 0; x < surfW; ++x) {
-				int sx = static_cast<int>(x * scaleX);
+			for (auto x = 0u; x < surfW; ++x) {
+				auto sx = static_cast<int>(x * scaleX);
 				dstRow[x] = srcRow[sx];
 			}
 		}
 	}
-
 
 	static auto __cdecl IsCorrectDiscInserted_Hook() -> int {
 		return 1;

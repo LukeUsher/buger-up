@@ -33,7 +33,7 @@ auto CdPlayer::open(uint32_t dataTrackSectors) -> bool {
 	_tracks.push_back(data); 
 	
 	WIN32_FIND_DATAA fd; 
-	HANDLE hFind = FindFirstFileA("*.bin", &fd); 
+	auto hFind = FindFirstFileA("*.bin", &fd);
 	
 	if (hFind == INVALID_HANDLE_VALUE) return false; 
 	
@@ -45,22 +45,22 @@ auto CdPlayer::open(uint32_t dataTrackSectors) -> bool {
 	
 	std::sort(files.begin(), files.end()); 
 	
-	uint32_t sector_offset = data.endSector + 1; 
+	auto sector_offset = data.endSector + 1;
 	for (auto& f : files) { 
-		size_t pos1 = f.find("(Track ");
-		size_t pos2 = f.find(").bin"); 
+		auto pos1 = f.find("(Track ");
+		auto pos2 = f.find(").bin");
 
 		if (pos1 == std::string::npos || pos2 == std::string::npos) continue; 
 		std::string numStr = f.substr(pos1 + 7, pos2 - (pos1 + 7));
 
-		int trackNum = atoi(numStr.c_str()); 
+		auto trackNum = atoi(numStr.c_str());
 		if (trackNum < 2) continue; 
 		
 		std::ifstream file(f, std::ios::binary | std::ios::ate); 
 		if (!file.is_open()) continue; 
 		
-		uint64_t size = file.tellg(); 
-		uint32_t sectors = (uint32_t)(size / sector_size); 
+		auto size = file.tellg();
+		auto sectors = (uint32_t)(size / sector_size);
 		
 		CdTrack t; 
 		t.filename = f; 
@@ -91,7 +91,7 @@ auto CdPlayer::close() -> void {
 
 auto CdPlayer::playTrack(int track, bool loop) -> void { 
 	SDL_ClearAudioStream(_stream);
-	if (track < 1 || track >(int)_tracks.size()) return;
+	if (track < 1 || track > static_cast<int>(_tracks.size())) return;
 	auto& t = _tracks[track - 1]; 
 	playSectors(t.startSector, t.endSector, loop); 
 } 
@@ -101,7 +101,7 @@ auto CdPlayer::trackCount() const -> int {
 } 
 
 auto CdPlayer::trackInfo(int track, uint32_t* start, uint32_t* end) -> bool { 
-	if (track < 1 || track >(int)_tracks.size()) return false;
+	if (track < 1 || track > static_cast<int>(_tracks.size())) return false;
 	*start = _tracks[track - 1].startSector;
 	*end = _tracks[track - 1].endSector;
 	return true;
@@ -111,8 +111,8 @@ auto CdPlayer::playSectors(uint32_t start, uint32_t end, bool loop) -> void {
 	std::lock_guard<std::mutex> lock(_mutex); 
 	if (start >= end) return; 
 	
-	_currentByte = (uint64_t)start * sector_size; 
-	_endByte = (uint64_t)end * sector_size; 
+	_currentByte = static_cast<uint64_t>(start * sector_size);
+	_endByte = static_cast<uint64_t>(end * sector_size);
 
 	_loop = loop;
 	_position = start; 
@@ -141,7 +141,7 @@ auto CdPlayer::position() const -> uint32_t {
 }
 
 auto CdPlayer::playbackThread() -> void {
-	const size_t chunkSize = sector_size * 16;
+	auto chunkSize = sector_size * 16;
 
 	while (!_terminating) {
 		if (SDL_AudioStreamDevicePaused(_stream)) {
@@ -171,12 +171,12 @@ auto CdPlayer::playbackThread() -> void {
 			continue;
 		}
 
-		uint64_t trackStartByte = (uint64_t)currentTrack->startSector * sector_size;
-		uint64_t trackEndByte = (uint64_t)(currentTrack->endSector + 1) * sector_size;
+		auto trackStartByte = static_cast<uint64_t>(currentTrack->startSector * sector_size);
+		auto trackEndByte = static_cast<uint64_t>((currentTrack->endSector + 1) * sector_size);
 		if (_currentByte < trackStartByte) _currentByte = trackStartByte;
 
-		uint64_t readStart = _currentByte - trackStartByte;
-		uint64_t remaining = trackEndByte - _currentByte;
+		auto readStart = _currentByte - trackStartByte;
+		auto remaining = trackEndByte - _currentByte;
 		if (remaining == 0) {
 			if (_loop) {
 				_currentByte = trackStartByte;
@@ -188,7 +188,7 @@ auto CdPlayer::playbackThread() -> void {
 			}
 		}
 
-		size_t toRead = (size_t)std::min<uint64_t>(remaining, chunkSize);
+		auto toRead = static_cast<size_t>(std::min<uint64_t>(remaining, chunkSize));
 
 		std::ifstream file(currentTrack->filename, std::ios::binary);
 		if (!file.is_open()) {
@@ -200,13 +200,13 @@ auto CdPlayer::playbackThread() -> void {
 		std::vector<char> buffer(toRead);
 		file.read(buffer.data(), buffer.size());
 
-		SDL_PutAudioStreamData(_stream, buffer.data(), (int)buffer.size());
+		SDL_PutAudioStreamData(_stream, buffer.data(), static_cast<int>(buffer.size()));
 
 		_currentByte += buffer.size();
 		_position = (uint32_t)(_currentByte / sector_size);
 
 		int bytesPerSec = 44100 * 2 * 2;
-		int ms = (int)((buffer.size() * 1000) / bytesPerSec);
+		int ms = static_cast<int>((buffer.size() * 1000) / bytesPerSec);
 		std::this_thread::sleep_for(std::chrono::milliseconds(ms / 2));
 	}
 }

@@ -1,4 +1,5 @@
 ﻿#include "ddraw.hpp"
+#include "../gdi32/gdi32.hpp"
 #include "../logger.hpp"
 
 #include "../patch-engine.h"
@@ -19,17 +20,34 @@ auto DirectDraw::flipPrimary() -> bool {
     if (!_primarySurface) return false;
     if (!_primarySurface->_surface) return false;
 
+    // In non-exclusive mode, we have to do the final blit using the GDI palette, not the DDD3D palette
+    if ((_cooperativeLevel & DDSCL_EXCLUSIVE) == 0) {
+        SDL_SetSurfacePalette(_primarySurface->_surface, gdi32._systemPalette);
+    }
+
+	// If no palette was set at all, fall back to the GDI palette
+    if (!_primarySurface->_palette) {
+        SDL_SetSurfacePalette(_primarySurface->_surface, gdi32._systemPalette);
+	}
+
     _primarySurface->_texture = SDL_CreateTextureFromSurface(_renderer, _primarySurface->_surface);
-    if (!_primarySurface->_texture) return false;
+    if (!_primarySurface->_texture) {
+        printf("SDL_CreateTextureFromSurface failed: %s\n", SDL_GetError());
+        return false;
+    }
+
+    if ((_cooperativeLevel & DDSCL_EXCLUSIVE) == 0 && _primarySurface->_palette) {
+        SDL_SetSurfacePalette(_primarySurface->_surface, _primarySurface->_palette->_palette);
+    }
 
     int rw, rh;
     SDL_GetCurrentRenderOutputSize(_renderer, &rw, &rh);
 
-    int sw = _primarySurface->_surface->w;
-    int sh = _primarySurface->_surface->h;
+    auto sw = _primarySurface->_surface->w;
+    auto sh = _primarySurface->_surface->h;
 
-    float srcAspect = static_cast<float>(sw) / static_cast<float>(sh);
-    float dstAspect = static_cast<float>(rw) / static_cast<float>(rh);
+    auto srcAspect = static_cast<float>(sw) / static_cast<float>(sh);
+    auto dstAspect = static_cast<float>(rw) / static_cast<float>(rh);
 
     SDL_FRect dstRect;
     if (srcAspect > dstAspect) {
@@ -53,18 +71,14 @@ auto DirectDraw::flipPrimary() -> bool {
 }
 
 auto DirectDraw::DirectDrawCreate(GUID* lpGUID, IDirectDraw** lplpDD, IUnknown* pUnkOuter) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("IDirectDraw");
 
-    TRACE_IN("lpGUID", lpGUID);
-    TRACE_IN("lplpDD", lplpDD);
-    TRACE_IN("pUnkOuter", pUnkOuter);
-
-    HRESULT hr = DD_OK;
+    TRACE_IN_PARAM("lpGUID", lpGUID);
+    TRACE_IN_PARAM("lplpDD", lplpDD);
+    TRACE_IN_PARAM("pUnkOuter", pUnkOuter);
 
     if (!lplpDD) {
-        hr = DDERR_INVALIDPARAMS;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_INVALIDPARAMS);
     }
 
     if (!directDraw._window) {
@@ -73,24 +87,18 @@ auto DirectDraw::DirectDrawCreate(GUID* lpGUID, IDirectDraw** lplpDD, IUnknown* 
 
     *lplpDD = &directDraw;
 
-    TRACE_OUT("lplpDD", lplpDD);
-    TRACE_RET("ddraw", hr);
-
-    return hr;
+    TRACE_OUT_PARAM("lplpDD", lplpDD);
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDraw::QueryInterface(REFIID riid, void** ppvObject) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("IDirectDraw");
 
-    TRACE_IN("riid", &riid);
-    TRACE_IN("ppvObject", ppvObject);
-
-    HRESULT hr = S_OK;
+    TRACE_IN_PARAM("riid", &riid);
+    TRACE_IN_PARAM("ppvObject", ppvObject);
 
     if (!ppvObject) {
-        hr = E_POINTER;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(E_POINTER);
     }
 
     *ppvObject = nullptr;
@@ -99,126 +107,98 @@ auto DirectDraw::QueryInterface(REFIID riid, void** ppvObject) -> HRESULT {
         *ppvObject = this;
         AddRef();
     } else {
-        hr = E_NOINTERFACE;
+        TRACE_RETURN(E_NOINTERFACE);
     }
 
-    TRACE_OUT("ppvObject", ppvObject);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_OUT_PARAM("ppvObject", ppvObject);
+    TRACE_RETURN(DD_OK);
 }
 
-
 auto DirectDraw::AddRef() -> ULONG {
-    TRACE_FUNC("ddraw");
-    TRACE_RET("ddraw", refCount + 1);
-    return ++refCount;
+    TRACE_FUNCTION_ENTRY("IDirectDraw");
+    TRACE_RETURN(++refCount);
 }
 
 auto DirectDraw::Release() -> ULONG {
-    TRACE_FUNC("ddraw");
-    TRACE_RET("ddraw", refCount - 1);
-    return --refCount;
+    TRACE_FUNCTION_ENTRY("IDirectDraw");
+    TRACE_RETURN(--refCount);
 }
 
 auto DirectDraw::Compact() -> HRESULT {
-    TRACE_FUNC("ddraw");
-    HRESULT hr = DD_OK;
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_FUNCTION_ENTRY_STUB("IDirectDraw");
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDraw::CreateClipper(DWORD flags, LPDIRECTDRAWCLIPPER* outClipper, IUnknown*) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("IDirectDraw");
 
-    TRACE_IN("flags", flags);
-    TRACE_IN("outClipper", outClipper);
-
-    HRESULT hr = DD_OK;
+    TRACE_IN_PARAM("flags", flags);
+    TRACE_IN_PARAM("outClipper", outClipper);
 
     if (!outClipper) {
-        hr = DDERR_INVALIDPARAMS;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_INVALIDPARAMS);
     }
 
-    hr = DirectDrawClipperImpl::Create(flags, outClipper);
+    auto hr = DirectDrawClipperImpl::Create(flags, outClipper);
 
-    TRACE_OUT("outClipper", outClipper);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_OUT_PARAM("outClipper", outClipper);
+    TRACE_RETURN(hr);
 }
 
-
 auto DirectDraw::CreatePalette(DWORD flags, LPPALETTEENTRY entries, LPDIRECTDRAWPALETTE* outPalette, IUnknown*) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("IDirectDraw");
 
-    TRACE_IN("flags", flags);
-    TRACE_IN("entries", entries);
-    TRACE_IN("outPalette", outPalette);
-
-    HRESULT hr = DD_OK;
+    TRACE_IN_PARAM("flags", flags);
+    TRACE_IN_PARAM("entries", entries);
+    TRACE_IN_PARAM("outPalette", outPalette);
 
     if (!outPalette) {
-        hr = DDERR_INVALIDPARAMS;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_INVALIDPARAMS);
     }
 
-    hr = DirectDrawPaletteImpl::Create(flags, entries, outPalette);
+    auto hr = DirectDrawPaletteImpl::Create(flags, entries, outPalette);
 
-    TRACE_OUT("outPalette", outPalette);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_OUT_PARAM("outPalette", outPalette);
+    TRACE_RETURN(hr);
 }
 
 auto DirectDraw::CreateSurface(LPDDSURFACEDESC lpDDSD, LPDIRECTDRAWSURFACE* lplpDDSurface, IUnknown*) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("IDirectDraw");
 
-    TRACE_IN("lpDDSD", lpDDSD);
-    TRACE_IN("lplpDDSurface", lplpDDSurface);
-
-    HRESULT hr = DD_OK;
+    TRACE_IN_PARAM("lpDDSD", lpDDSD);
+    TRACE_IN_PARAM("lplpDDSurface", lplpDDSurface);
 
     if (!lpDDSD || !lplpDDSurface) {
-        hr = DDERR_INVALIDPARAMS;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_INVALIDPARAMS);
     }
 
-    hr = DirectDrawSurfaceImpl::Create(lpDDSD, lplpDDSurface);
+    auto hr = DirectDrawSurfaceImpl::Create(lpDDSD, lplpDDSurface);
 
-    TRACE_OUT("lplpDDSurface", lplpDDSurface);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_OUT_PARAM("lplpDDSurface", lplpDDSurface);
+    TRACE_RETURN(hr);
 }
 
 auto DirectDraw::DuplicateSurface(LPDIRECTDRAWSURFACE lpDDSrc, LPDIRECTDRAWSURFACE* lplpDDDest) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY_STUB("IDirectDraw");
 
-    TRACE_IN("lpDDSrc", lpDDSrc);
-    TRACE_IN("lplpDDDest", lplpDDDest);
+    TRACE_IN_PARAM("lpDDSrc", lpDDSrc);
+    TRACE_IN_PARAM("lplpDDDest", lplpDDDest);
+    TRACE_OUT_PARAM("lplpDDDest", lplpDDDest);
 
-    HRESULT hr = DDERR_UNSUPPORTED;
-
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_RETURN(DDERR_UNSUPPORTED);
 }
 
 
 auto DirectDraw::EnumDisplayModes(DWORD dwFlags, LPDDSURFACEDESC lpDDSurfaceDesc, LPVOID lpContext, LPDDENUMMODESCALLBACK lpEnumModesCallback) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("IDirectDraw");
 
-    TRACE_IN("dwFlags", dwFlags);
-    TRACE_IN("lpDDSurfaceDesc", lpDDSurfaceDesc);
-    TRACE_IN("lpContext", lpContext);
-    TRACE_IN("lpEnumModesCallback", lpEnumModesCallback);
-
-    HRESULT hr = DD_OK;
+    TRACE_IN_PARAM("dwFlags", dwFlags);
+    TRACE_IN_PARAM("lpDDSurfaceDesc", lpDDSurfaceDesc);
+    TRACE_IN_PARAM("lpContext", lpContext);
+    TRACE_IN_PARAM("lpEnumModesCallback", lpEnumModesCallback);
 
     if (!lpEnumModesCallback) {
-        hr = DDERR_INVALIDPARAMS;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_INVALIDPARAMS);
     }
 
     struct Mode { DWORD w, h, bpp; };
@@ -241,175 +221,135 @@ auto DirectDraw::EnumDisplayModes(DWORD dwFlags, LPDDSURFACEDESC lpDDSurfaceDesc
         desc.ddpfPixelFormat.dwSize = sizeof(DDPIXELFORMAT);
         desc.ddpfPixelFormat.dwFlags = DDPF_RGB;
         desc.ddpfPixelFormat.dwRGBBitCount = m.bpp;
-        hr = lpEnumModesCallback(&desc, lpContext);
+        auto hr = lpEnumModesCallback(&desc, lpContext);
         if (hr != DDENUMRET_OK) break;
     }
 
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDraw::EnumSurfaces(DWORD flags, LPDDSURFACEDESC lpDDSD, LPVOID lpContext, LPDDENUMSURFACESCALLBACK cb) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY_STUB("IDirectDraw");
 
-    TRACE_IN("flags", flags);
-    TRACE_IN("lpDDSD", lpDDSD);
-    TRACE_IN("lpContext", lpContext);
-    TRACE_IN("cb", cb);
+    TRACE_IN_PARAM("flags", flags);
+    TRACE_IN_PARAM("lpDDSD", lpDDSD);
+    TRACE_IN_PARAM("lpContext", lpContext);
+    TRACE_IN_PARAM("cb", cb);
 
-    HRESULT hr = DD_OK;
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDraw::FlipToGDISurface() -> HRESULT {
-    TRACE_FUNC("ddraw");
-    HRESULT hr = DD_OK;
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_FUNCTION_ENTRY_STUB("IDirectDraw");
+    TRACE_RETURN(DD_OK);
 }
 
-
 auto DirectDraw::GetCaps(LPDDCAPS lpDDDriverCaps, LPDDCAPS lpDDHELCaps) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY_STUB("IDirectDraw");
 
-    TRACE_IN("lpDDDriverCaps", lpDDDriverCaps);
-    TRACE_IN("lpDDHELCaps", lpDDHELCaps);
+    TRACE_IN_PARAM("lpDDDriverCaps", lpDDDriverCaps);
+    TRACE_IN_PARAM("lpDDHELCaps", lpDDHELCaps);
 
-    HRESULT hr = DD_OK;
-
-    TRACE_OUT("lpDDDriverCaps", lpDDDriverCaps);
-    TRACE_OUT("lpDDHELCaps", lpDDHELCaps);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_OUT_PARAM("lpDDDriverCaps", lpDDDriverCaps);
+    TRACE_OUT_PARAM("lpDDHELCaps", lpDDHELCaps);
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDraw::GetDisplayMode(LPDDSURFACEDESC lpDDSD) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("IDirectDraw");
 
-    TRACE_IN("lpDDSD", lpDDSD);
+    TRACE_IN_PARAM("lpDDSD", lpDDSD);
 
-    HRESULT hr = DD_OK;
+    lpDDSD->dwWidth = _displayWidth;
+    lpDDSD->dwHeight = _displayHeight;
 
-    TRACE_OUT("lpDDSD", lpDDSD);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_OUT_PARAM("lpDDSD", lpDDSD);
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDraw::GetFourCCCodes(LPDWORD lpNumCodes, LPDWORD lpCodes) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY_STUB("IDirectDraw");
 
-    TRACE_IN("lpNumCodes", lpNumCodes);
-    TRACE_IN("lpCodes", lpCodes);
+    TRACE_IN_PARAM("lpNumCodes", lpNumCodes);
+    TRACE_IN_PARAM("lpCodes", lpCodes);
 
-    HRESULT hr = DD_OK;
-
-    TRACE_OUT("lpNumCodes", lpNumCodes);
-    TRACE_OUT("lpCodes", lpCodes);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_OUT_PARAM("lpNumCodes", lpNumCodes);
+    TRACE_OUT_PARAM("lpCodes", lpCodes);
+    TRACE_RETURN(DD_OK);
 }
-
 
 auto DirectDraw::GetGDISurface(LPDIRECTDRAWSURFACE* surf) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY_STUB("IDirectDraw");
 
-    TRACE_IN("surf", surf);
+    TRACE_IN_PARAM("surf", surf);
 
-    HRESULT hr = DD_OK;
-
-    TRACE_OUT("surf", surf);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_OUT_PARAM("surf", surf);
+    TRACE_RETURN(DD_OK);
 }
 
-
 auto DirectDraw::GetMonitorFrequency(LPDWORD pFreq) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY_STUB("IDirectDraw");
 
-    TRACE_IN("pFreq", pFreq);
-
-    HRESULT hr = DD_OK;
-
-    TRACE_OUT("pFreq", pFreq);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_IN_PARAM("pFreq", pFreq);
+    TRACE_OUT_PARAM("pFreq", pFreq);
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDraw::GetScanLine(LPDWORD pLine) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY_STUB("IDirectDraw");
 
-    TRACE_IN("pLine", pLine);
-
-    HRESULT hr = DD_OK;
-
-    TRACE_OUT("pLine", pLine);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_IN_PARAM("pLine", pLine);
+    TRACE_OUT_PARAM("pLine", pLine);
+    // Intentionally unsupported; games accept that device has no scanline counter
+    TRACE_RETURN(DDERR_UNSUPPORTED);
 }
 
 auto DirectDraw::GetVerticalBlankStatus(LPBOOL pbIsInVBlank) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY_STUB("IDirectDraw");
 
-    TRACE_IN("pbIsInVBlank", pbIsInVBlank);
-
-    HRESULT hr = DD_OK;
+    TRACE_IN_PARAM("pbIsInVBlank", pbIsInVBlank);
 
     if (!pbIsInVBlank) {
-        hr = DDERR_INVALIDPARAMS;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_INVALIDPARAMS);
     }
 
     *pbIsInVBlank = FALSE;
 
-    TRACE_OUT("pbIsInVBlank", pbIsInVBlank);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_OUT_PARAM("pbIsInVBlank", pbIsInVBlank);
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDraw::Initialize(GUID* lpGUID) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("IDirectDraw");
 
-    TRACE_IN("lpGUID", lpGUID);
-
-    HRESULT hr = DD_OK;
+    TRACE_IN_PARAM("lpGUID", lpGUID);
 
     if (_window) {
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DD_OK);
     }
 
     _hwnd = _findMainWindow();
     if (!_hwnd) {
-        hr = -1;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_GENERIC);
     }
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
-        hr = -1;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_GENERIC);
     }
 
-    SDL_PropertiesID props = SDL_CreateProperties();
+    auto props = SDL_CreateProperties();
     SDL_SetPointerProperty(props, SDL_PROP_WINDOW_CREATE_WIN32_HWND_POINTER, _hwnd);
 
     _window = SDL_CreateWindowWithProperties(props);
     SDL_DestroyProperties(props);
 
     if (!_window) {
-        hr = -1;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_GENERIC);
     }
 
     _renderer = SDL_CreateRenderer(_window, nullptr);
     if (!_renderer) {
-        hr = -1;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_GENERIC);
     }
 
     int w, h;
@@ -418,23 +358,19 @@ auto DirectDraw::Initialize(GUID* lpGUID) -> HRESULT {
     _displayHeight = _windowDisplayHeight = h;
     _displayDepth = 8;
 
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_RETURN(DD_OK);
 }
 
-
 auto DirectDraw::RestoreDisplayMode() -> HRESULT {
-    TRACE_FUNC("ddraw");
-    HRESULT hr = DD_OK;
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_FUNCTION_ENTRY_STUB("IDirectDraw");
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDraw::SetCooperativeLevel(HWND hwnd, DWORD flags) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("IDirectDraw");
 
-    TRACE_IN("hwnd", hwnd);
-    TRACE_IN("flags", flags);
+    TRACE_IN_PARAM("hwnd", hwnd);
+    TRACE_IN_PARAM("flags", flags);
 
     _cooperativeLevel = flags;
 
@@ -445,37 +381,30 @@ auto DirectDraw::SetCooperativeLevel(HWND hwnd, DWORD flags) -> HRESULT {
 
     Sleep(100);
 
-    HRESULT hr = DD_OK;
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_RETURN(DD_OK);
 }
 
-
 auto DirectDraw::SetDisplayMode(DWORD w, DWORD h, DWORD bpp) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("IDirectDraw");
 
-    TRACE_IN("width", w);
-    TRACE_IN("height", h);
-    TRACE_IN("bpp", bpp);
+    TRACE_IN_PARAM("width", w);
+    TRACE_IN_PARAM("height", h);
+    TRACE_IN_PARAM("bpp", bpp);
 
     _displayWidth = w;
     _displayHeight = h;
     _displayDepth = bpp;
 
-    HRESULT hr = DD_OK;
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDraw::WaitForVerticalBlank(DWORD flags, HANDLE h) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY_STUB("IDirectDraw");
 
-    TRACE_IN("flags", flags);
-    TRACE_IN("handle", h);
+    TRACE_IN_PARAM("flags", flags);
+    TRACE_IN_PARAM("handle", h);
 
-    HRESULT hr = DD_OK;
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDraw::_findMainWindow() -> HWND {
@@ -492,7 +421,7 @@ auto DirectDraw::_findMainWindow() -> HWND {
         
         if (windowPID != data->pid) return TRUE;
 
-        if (!IsWindowVisible(hwnd)) return TRUE; 
+        //if (!IsWindowVisible(hwnd)) return TRUE;
 
         char className[256]{};
         GetClassNameA(hwnd, className, sizeof(className));

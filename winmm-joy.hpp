@@ -30,7 +30,6 @@ struct WinmmJoy {
 
     inline static DpadMode dpadMode = DpadMode::Axis;
 
-    // API hooks
     static auto __stdcall ThumbToJoyRange(LONG val) -> DWORD;
     static auto __stdcall MapButtons(WORD xb) -> DWORD;
     static auto  __stdcall MapFaceButtons(WORD xb) -> WORD;

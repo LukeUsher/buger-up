@@ -1,18 +1,15 @@
 #include "palette.hpp"
+#include "ddraw.hpp"
 #include "../logger.hpp"
 
 auto DirectDrawPaletteImpl::QueryInterface(REFIID riid, void** ppvObject) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("ddraw");
 
-    TRACE_IN("riid", &riid);
-    TRACE_IN("ppvObject", ppvObject);
-
-    HRESULT hr = S_OK;
+    TRACE_IN_PARAM("riid", &riid);
+    TRACE_IN_PARAM("ppvObject", ppvObject);
 
     if (!ppvObject) {
-        hr = E_POINTER;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(E_POINTER);
     }
 
     *ppvObject = nullptr;
@@ -21,65 +18,50 @@ auto DirectDrawPaletteImpl::QueryInterface(REFIID riid, void** ppvObject) -> HRE
         *ppvObject = this;
         AddRef();
     } else {
-        hr = E_NOINTERFACE;
+        TRACE_RETURN(E_NOINTERFACE);
     }
 
-    TRACE_OUT("ppvObject", ppvObject);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_OUT_PARAM("ppvObject", ppvObject);
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDrawPaletteImpl::AddRef() -> ULONG {
-    TRACE_FUNC("ddraw");
-
-    refCount++;
-    TRACE_RET("ddraw", refCount);
-    return refCount;
+    TRACE_FUNCTION_ENTRY("ddraw");
+    TRACE_RETURN(++refCount);
 }
 
 auto DirectDrawPaletteImpl::Release() -> ULONG {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("ddraw");
 
     refCount--;
-    ULONG count = refCount;
 
-    TRACE_RET("ddraw", count);
-
-    if (count == 0) {
+    if (refCount == 0) {
         if (_palette) SDL_DestroyPalette(_palette);
         delete this;
     }
 
-    return count;
+    TRACE_RETURN(refCount);
 }
 
 auto DirectDrawPaletteImpl::Create(DWORD flags, LPPALETTEENTRY entries, IDirectDrawPalette** outPalette) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("ddraw");
 
-    TRACE_IN("flags", flags);
-    TRACE_IN("entries", entries);
-    TRACE_IN("outPalette", outPalette);
-
-    HRESULT hr = DD_OK;
+    TRACE_IN_PARAM("flags", flags);
+    TRACE_IN_PARAM("entries", entries);
+    TRACE_IN_PARAM("outPalette", outPalette);
 
     if (!outPalette) {
-        hr = DDERR_INVALIDPARAMS;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_INVALIDPARAMS);
     }
 
-    DirectDrawPaletteImpl* p = new (std::nothrow) DirectDrawPaletteImpl();
+    auto p = new (std::nothrow) DirectDrawPaletteImpl();
     if (!p) {
-        hr = DDERR_OUTOFMEMORY;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_OUTOFMEMORY);
     }
 
     if ((flags & DDPCAPS_8BIT) != DDPCAPS_8BIT) {
         delete p;
-        hr = DDERR_INVALIDPARAMS;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_INVALIDPARAMS);
     }
 
     p->caps = flags;
@@ -87,112 +69,88 @@ auto DirectDrawPaletteImpl::Create(DWORD flags, LPPALETTEENTRY entries, IDirectD
     p->_palette = SDL_CreatePalette(256);
     if (!p->_palette) {
         delete p;
-        hr = DDERR_OUTOFMEMORY;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_OUTOFMEMORY);
     }
 
-    if (entries)
-        p->SetEntries(0, 0, 256, entries);
+    if (entries) p->SetEntries(0, 0, 256, entries);
 
     *outPalette = p;
 
-    TRACE_OUT("outPalette", outPalette);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_OUT_PARAM("outPalette", outPalette);
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDrawPaletteImpl::GetCaps(LPDWORD outFlags) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("ddraw");
 
-    TRACE_IN("outFlags", outFlags);
-
-    HRESULT hr = DD_OK;
+    TRACE_IN_PARAM("outFlags", outFlags);
 
     if (!outFlags) {
-        hr = DDERR_INVALIDPARAMS;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_INVALIDPARAMS);
     }
 
     *outFlags = caps;
 
-    TRACE_OUT("outFlags", outFlags);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_OUT_PARAM("outFlags", outFlags);
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDrawPaletteImpl::GetEntries(DWORD flags, DWORD start, DWORD count, LPPALETTEENTRY outEntries) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("ddraw");
 
-    TRACE_IN("flags", flags);
-    TRACE_IN("start", start);
-    TRACE_IN("count", count);
-    TRACE_IN("outEntries", outEntries);
-
-    HRESULT hr = DD_OK;
+    TRACE_IN_PARAM("flags", flags);
+    TRACE_IN_PARAM("start", start);
+    TRACE_IN_PARAM("count", count);
+    TRACE_IN_PARAM("outEntries", outEntries);
 
     if (!outEntries || !_palette) {
-        hr = DDERR_INVALIDPARAMS;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_INVALIDPARAMS);
     }
 
-    if (start >= _palette->ncolors) {
-        hr = DDERR_INVALIDPARAMS;
-        TRACE_RET("ddraw", hr);
-        return hr;
+    if (start >= static_cast<DWORD>(_palette->ncolors)) {
+        TRACE_RETURN(DDERR_INVALIDPARAMS);
     }
 
     count = std::min<DWORD>(count, _palette->ncolors - start);
 
-    for (DWORD i = 0; i < count; i++) {
-        const SDL_Color& c = _palette->colors[start + i];
+    for (auto i = 0u; i < count; i++) {
+        auto& c = _palette->colors[start + i];
         outEntries[i].peRed = c.r;
         outEntries[i].peGreen = c.g;
         outEntries[i].peBlue = c.b;
         outEntries[i].peFlags = 0;
     }
 
-    TRACE_OUT("outEntries", outEntries);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_OUT_PARAM("outEntries", outEntries);
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDrawPaletteImpl::Initialize(LPDIRECTDRAW lpDD, DWORD flags, LPPALETTEENTRY inEntries) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("ddraw");
 
-    TRACE_IN("lpDD", lpDD);
-    TRACE_IN("flags", flags);
-    TRACE_IN("inEntries", inEntries);
+    TRACE_IN_PARAM("lpDD", lpDD);
+    TRACE_IN_PARAM("flags", flags);
+    TRACE_IN_PARAM("inEntries", inEntries);
 
     caps = flags;
 
-    HRESULT hr = DD_OK;
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDrawPaletteImpl::SetEntries(DWORD flags, DWORD start, DWORD count, LPPALETTEENTRY inEntries) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("ddraw");
 
-    TRACE_IN("flags", flags);
-    TRACE_IN("start", start);
-    TRACE_IN("count", count);
-    TRACE_IN("inEntries", inEntries);
-
-    HRESULT hr = DD_OK;
+    TRACE_IN_PARAM("flags", flags);
+    TRACE_IN_PARAM("start", start);
+    TRACE_IN_PARAM("count", count);
+    TRACE_IN_PARAM("inEntries", inEntries);
 
     if (!inEntries || !_palette) {
-        hr = DDERR_INVALIDPARAMS;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_INVALIDPARAMS);
     }
 
-    if (start >= _palette->ncolors) {
-        hr = DDERR_INVALIDPARAMS;
-        TRACE_RET("ddraw", hr);
-        return hr;
+    if (start >= static_cast<DWORD>(_palette->ncolors)) {
+        TRACE_RETURN(DDERR_INVALIDPARAMS);
     }
 
     count = std::min<DWORD>(count, _palette->ncolors - start);
@@ -208,11 +166,8 @@ auto DirectDrawPaletteImpl::SetEntries(DWORD flags, DWORD start, DWORD count, LP
 
     if (!SDL_SetPaletteColors(_palette, _palette->colors + start, start, count)) {
         std::cerr << "SDL_SetPaletteColors failed: " << SDL_GetError() << "\n";
-        hr = DDERR_GENERIC;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_GENERIC);
     }
 
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_RETURN(DD_OK);
 }

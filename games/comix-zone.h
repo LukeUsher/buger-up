@@ -17,7 +17,7 @@ struct ComixZone : Game
     static auto __stdcall setFullscreen(HWND hWnd, bool enable) -> void {
         //The game will pass an invalid HWND here (what would be the DISPLAYDIB window)
 		//but we know the offset of the real hwnd in memory, so we can just read it directly
-        hWnd = *(HWND*)0x00483B70;
+	    hWnd = *reinterpret_cast<HWND*>(0x00483B70);
         static HMENU savedMenu = NULL;
         static RECT savedRect = { 0 };
 
@@ -30,8 +30,8 @@ struct ComixZone : Game
                 DrawMenuBar(hWnd);
             }
 
-            LONG style = GetWindowLongA(hWnd, GWL_STYLE);
-            LONG ex = GetWindowLongA(hWnd, GWL_EXSTYLE);
+            auto style = GetWindowLongA(hWnd, GWL_STYLE);
+            auto ex = GetWindowLongA(hWnd, GWL_EXSTYLE);
 
             style &= ~(WS_OVERLAPPEDWINDOW);
             ex &= ~(WS_EX_WINDOWEDGE | WS_EX_DLGMODALFRAME);
@@ -46,8 +46,8 @@ struct ComixZone : Game
             return;
         }
 
-        LONG style = GetWindowLongA(hWnd, GWL_STYLE);
-        LONG ex = GetWindowLongA(hWnd, GWL_EXSTYLE);
+        auto style = GetWindowLongA(hWnd, GWL_STYLE);
+        auto ex = GetWindowLongA(hWnd, GWL_EXSTYLE);
 
         style |= WS_OVERLAPPEDWINDOW;
         ex |= WS_EX_WINDOWEDGE;

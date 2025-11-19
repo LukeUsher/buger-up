@@ -49,22 +49,17 @@ auto __stdcall WinmmJoy::MapFaceButtons(WORD xb) -> WORD {
 }
 
 auto __stdcall WinmmJoy::joyGetDevCapsA(UINT_PTR uJoyID, LPJOYCAPSA pjc, UINT cbjc) -> MMRESULT {
-    TRACE_FUNC("winmm");
-    TRACE_IN("uJoyID", uJoyID);
-    TRACE_IN("pjc", pjc);
-    TRACE_IN("cbjc", cbjc);
-
-    MMRESULT ret;
+    TRACE_FUNCTION_ENTRY("winmm");
+    TRACE_IN_PARAM("uJoyID", uJoyID);
+    TRACE_IN_PARAM("pjc", pjc);
+    TRACE_IN_PARAM("cbjc", cbjc);
 
     if (!pjc || cbjc < sizeof(JOYCAPSA)) {
-        ret = MMSYSERR_INVALPARAM;
-        TRACE_RET("winmm", ret);
-        return ret;
+        TRACE_RETURN(MMSYSERR_INVALPARAM);
     }
+
     if (uJoyID >= 4) {
-        ret = MMSYSERR_NODRIVER;
-        TRACE_RET("winmm", ret);
-        return ret;
+        TRACE_RETURN(MMSYSERR_NODRIVER);
     }
 
     ZeroMemory(pjc, cbjc);
@@ -78,44 +73,32 @@ auto __stdcall WinmmJoy::joyGetDevCapsA(UINT_PTR uJoyID, LPJOYCAPSA pjc, UINT cb
     pjc->wPeriodMin = 0;
     pjc->wPeriodMax = 0;
 
-    // OUT params
-    TRACE_OUT("pjc", pjc);
-
-    ret = JOYERR_NOERROR;
-    TRACE_RET("winmm", ret);
-    return ret;
+    TRACE_OUT_PARAM("pjc", pjc);
+    TRACE_RETURN(JOYERR_NOERROR);
 }
 
 auto __stdcall WinmmJoy::joyGetNumDevs() -> UINT {
-    TRACE_FUNC("winmm");
-
-    UINT ret = 4;
-
-    TRACE_RET("winmm", ret);
-    return ret;
+    TRACE_FUNCTION_ENTRY("winmm");
+    TRACE_RETURN(4);
 }
 
 auto __stdcall WinmmJoy::joyGetPosEx(UINT uJoyID, LPJOYINFOEX pji) -> MMRESULT {
-    TRACE_FUNC("winmm");
-    TRACE_IN("uJoyID", uJoyID);
-    TRACE_IN("pji", pji);
-
-    MMRESULT ret;
+    TRACE_FUNCTION_ENTRY("winmm");
+    TRACE_IN_PARAM("uJoyID", uJoyID);
+    TRACE_IN_PARAM("pji", pji);
 
     if (uJoyID >= 4) {
-        ret = MMSYSERR_NODRIVER;
-        TRACE_RET("winmm", ret);
-        return ret;
+        TRACE_RETURN(MMSYSERR_NODRIVER);
     }
 
     XINPUT_STATE xi{};
-    DWORD res = XInputGetState(uJoyID, &xi);
+    auto res = XInputGetState(uJoyID, &xi);
 
     pji->dwSize = sizeof(JOYINFOEX);
 
     if (res == ERROR_SUCCESS) {
-        LONG lx = xi.Gamepad.sThumbLX;
-        LONG ly = xi.Gamepad.sThumbLY;
+        auto lx = xi.Gamepad.sThumbLX;
+        auto ly = xi.Gamepad.sThumbLY;
 
         if (dpadMode == DpadMode::Axis || dpadMode == DpadMode::Both) {
             if (xi.Gamepad.wButtons & (XINPUT_GAMEPAD_DPAD_LEFT |
@@ -150,7 +133,7 @@ auto __stdcall WinmmJoy::joyGetPosEx(UINT uJoyID, LPJOYINFOEX pji) -> MMRESULT {
         if ((dpadMode == DpadMode::POV || dpadMode == DpadMode::Both) &&
             (pji->dwFlags & JOY_RETURNPOV)) {
 
-            WORD b = xi.Gamepad.wButtons;
+            auto b = xi.Gamepad.wButtons;
             if (b & XINPUT_GAMEPAD_DPAD_UP) {
                 if (b & XINPUT_GAMEPAD_DPAD_RIGHT) pji->dwPOV = 4500;
                 else if (b & XINPUT_GAMEPAD_DPAD_LEFT) pji->dwPOV = 31500;
@@ -175,32 +158,25 @@ auto __stdcall WinmmJoy::joyGetPosEx(UINT uJoyID, LPJOYINFOEX pji) -> MMRESULT {
         pji->dwPOV = JOY_POVCENTERED;
     }
 
-    TRACE_OUT("pji", pji);
+    TRACE_OUT_PARAM("pji", pji);
 
-    ret = JOYERR_NOERROR;
-    TRACE_RET("winmm", ret);
-    return ret;
+    TRACE_RETURN(JOYERR_NOERROR);
 }
 
 auto __stdcall WinmmJoy::joySetCapture(HWND hwnd, UINT uJoyID, UINT uPeriod, BOOL fChanged) -> MMRESULT {
-    TRACE_FUNC("winmm");
-    TRACE_IN("hwnd", hwnd);
-    TRACE_IN("uJoyID", uJoyID);
-    TRACE_IN("uPeriod", uPeriod);
-    TRACE_IN("fChanged", fChanged);
-
-    MMRESULT ret;
+    TRACE_FUNCTION_ENTRY("winmm");
+    TRACE_IN_PARAM("hwnd", hwnd);
+    TRACE_IN_PARAM("uJoyID", uJoyID);
+    TRACE_IN_PARAM("uPeriod", uPeriod);
+    TRACE_IN_PARAM("fChanged", fChanged);
 
     if (uJoyID >= 4) {
-        ret = MMSYSERR_NODRIVER;
-        TRACE_RET("winmm", ret);
-        return ret;
+        TRACE_RETURN(MMSYSERR_NODRIVER);
     }
 
     if (captures.count(uJoyID)) {
         captures[uJoyID].active = false;
-        if (captures[uJoyID].pollThread.joinable())
-            captures[uJoyID].pollThread.join();
+        if (captures[uJoyID].pollThread.joinable()) captures[uJoyID].pollThread.join();
     }
 
     JoyCapture& capture = captures[uJoyID];
@@ -210,30 +186,21 @@ auto __stdcall WinmmJoy::joySetCapture(HWND hwnd, UINT uJoyID, UINT uPeriod, BOO
     capture.active = true;
     capture.pollThread = std::thread(PollJoystick, &capture);
 
-    ret = JOYERR_NOERROR;
-    TRACE_RET("winmm", ret);
-    return ret;
+    TRACE_RETURN(JOYERR_NOERROR);
 }
 
 auto __stdcall WinmmJoy::joySetThreshold(UINT uJoyID, UINT uThreshold) -> UINT {
-    TRACE_FUNC("winmm");
-    TRACE_IN("uJoyID", uJoyID);
-    TRACE_IN("uThreshold", uThreshold);
-
-    UINT ret;
+    TRACE_FUNCTION_ENTRY("winmm");
+    TRACE_IN_PARAM("uJoyID", uJoyID);
+    TRACE_IN_PARAM("uThreshold", uThreshold);
 
     if (uJoyID >= 4) {
-        ret = MMSYSERR_NODRIVER;
-        TRACE_RET("winmm", ret);
-        return ret;
+        TRACE_RETURN(MMSYSERR_NODRIVER);
     }
 
-    if (captures.count(uJoyID))
-        captures[uJoyID].threshold = uThreshold;
+    if (captures.count(uJoyID)) captures[uJoyID].threshold = uThreshold;
 
-    ret = JOYERR_NOERROR;
-    TRACE_RET("winmm", ret);
-    return ret;
+    TRACE_RETURN(JOYERR_NOERROR);
 }
 
 auto WinmmJoy::PollJoystick(JoyCapture* capture) -> void {
@@ -244,12 +211,12 @@ auto WinmmJoy::PollJoystick(JoyCapture* capture) -> void {
             continue;
         }
 
-        WORD wButtons = MapFaceButtons(state.Gamepad.wButtons);
-        LONG lx = state.Gamepad.sThumbLX;
-        LONG ly = state.Gamepad.sThumbLY;
+        auto wButtons = MapFaceButtons(state.Gamepad.wButtons);
+        auto lx = state.Gamepad.sThumbLX;
+        auto ly = state.Gamepad.sThumbLY;
 
-        int dirX = 0, dirY = 0;
-        const LONG DEADZONE = 8000;
+        auto dirX = 0, dirY = 0;
+        const auto DEADZONE = 8000;
 
         if (state.Gamepad.sThumbLX < -DEADZONE) dirX = -1;
         else if (state.Gamepad.sThumbLX > DEADZONE) dirX = 1;
@@ -262,8 +229,8 @@ auto WinmmJoy::PollJoystick(JoyCapture* capture) -> void {
         if (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP)    dirY = -1;
         if (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN)  dirY = 1;
 
-        DWORD dwX = (dirX + 1) * 32767;
-        DWORD dwY = (dirY + 1) * 32767;
+        auto dwX = (dirX + 1) * 32767;
+        auto dwY = (dirY + 1) * 32767;
 
         if (dirX != capture->lastX || dirY != capture->lastY) {
             SendMessage(capture->hwnd, MM_JOY1MOVE + capture->uJoyID, 0, MAKELPARAM(dwX, dwY));
@@ -271,7 +238,7 @@ auto WinmmJoy::PollJoystick(JoyCapture* capture) -> void {
             capture->lastY = dirY;
         }
 
-        WORD changed = wButtons ^ (WORD)capture->lastButtons;
+        auto changed = wButtons ^ (WORD)capture->lastButtons;
         if (changed) {
             if (changed & JOY_BUTTON1) {
                 SendMessage(capture->hwnd,

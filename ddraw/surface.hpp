@@ -16,7 +16,7 @@ struct DirectDrawSurfaceImpl : public IDirectDrawSurface {
     SDL_Texture* _texture = nullptr;
     DirectDrawPaletteImpl* _palette = nullptr;
     DirectDrawSurfaceImpl* _backbuffer = nullptr;
-
+    uint64_t _lastBlit = 0;
 
     ~DirectDrawSurfaceImpl();
 

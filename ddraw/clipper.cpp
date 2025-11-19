@@ -2,17 +2,13 @@
 #include "../logger.hpp"
 
 auto DirectDrawClipperImpl::QueryInterface(REFIID riid, void** ppvObject) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("IDirectDrawClipper");
 
-    TRACE_IN("riid", &riid);
-    TRACE_IN("ppvObject", ppvObject);
-
-    HRESULT hr = S_OK;
+    TRACE_IN_PARAM("riid", &riid);
+    TRACE_IN_PARAM("ppvObject", ppvObject);
 
     if (!ppvObject) {
-        hr = E_POINTER;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(E_POINTER);
     }
 
     *ppvObject = nullptr;
@@ -20,151 +16,114 @@ auto DirectDrawClipperImpl::QueryInterface(REFIID riid, void** ppvObject) -> HRE
     if (riid == IID_IUnknown || riid == IID_IDirectDrawClipper) {
         *ppvObject = this;
         AddRef();
-    }
-    else {
-        hr = E_NOINTERFACE;
+    } else {
+        TRACE_RETURN(E_NOINTERFACE);
     }
 
-    TRACE_OUT("ppvObject", ppvObject);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_OUT_PARAM("ppvObject", ppvObject);
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDrawClipperImpl::AddRef() -> ULONG {
-    TRACE_FUNC("ddraw");
-
-    refCount++;
-    TRACE_RET("ddraw", refCount);
-    return refCount;
+    TRACE_FUNCTION_ENTRY("IDirectDrawClipper");
+    TRACE_RETURN(++refCount);
 }
 
 auto DirectDrawClipperImpl::Release() -> ULONG {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("IDirectDrawClipper");
 
     refCount--;
-    ULONG rc = refCount;
+    if (refCount == 0) delete this;
 
-    TRACE_RET("ddraw", rc);
-
-    if (rc == 0)
-        delete this;
-
-    return rc;
+    TRACE_RETURN(--refCount);
 }
 
 auto DirectDrawClipperImpl::Create(DWORD flags, IDirectDrawClipper** outClipper) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("IDirectDrawClipper");
 
-    TRACE_IN("flags", flags);
-    TRACE_IN("outClipper", outClipper);
-
-    HRESULT hr = DD_OK;
+    TRACE_IN_PARAM("flags", flags);
+    TRACE_IN_PARAM("outClipper", outClipper);
 
     if (!outClipper) {
-        hr = DDERR_INVALIDPARAMS;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_INVALIDPARAMS);
     }
 
-    DirectDrawClipperImpl* p = new (std::nothrow) DirectDrawClipperImpl();
+    auto p = new (std::nothrow) DirectDrawClipperImpl();
     if (!p) {
-        hr = DDERR_OUTOFMEMORY;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_OUTOFMEMORY);
     }
 
     p->caps = flags;
     *outClipper = p;
 
-    TRACE_OUT("outClipper", outClipper);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_OUT_PARAM("outClipper", outClipper);
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDrawClipperImpl::GetClipList(LPRECT lpRect, LPRGNDATA lpRgnData, LPDWORD lpSize) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY_STUB("IDirectDrawClipper");
 
-    TRACE_IN("lpRect", lpRect);
-    TRACE_IN("lpRgnData", lpRgnData);
-    TRACE_IN("lpSize", lpSize);
-
-    HRESULT hr = DD_OK;
-
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_IN_PARAM("lpRect", lpRect);
+    TRACE_IN_PARAM("lpRgnData", lpRgnData);
+    TRACE_IN_PARAM("lpSize", lpSize);
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDrawClipperImpl::GetHWnd(HWND* outHwnd) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("IDirectDrawClipper");
 
-    TRACE_IN("outHwnd", outHwnd);
-
-    HRESULT hr = DD_OK;
+    TRACE_IN_PARAM("outHwnd", outHwnd);
 
     if (!outHwnd) {
-        hr = DDERR_INVALIDPARAMS;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_INVALIDPARAMS);
     }
 
     *outHwnd = nullptr;
 
-    TRACE_OUT("outHwnd", outHwnd);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_OUT_PARAM("outHwnd", outHwnd);
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDrawClipperImpl::Initialize(LPDIRECTDRAW lpDD, DWORD flags) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY("IDirectDrawClipper");
 
-    TRACE_IN("lpDD", lpDD);
-    TRACE_IN("flags", flags);
+    TRACE_IN_PARAM("lpDD", lpDD);
+    TRACE_IN_PARAM("flags", flags);
 
     caps = flags;
 
-    HRESULT hr = DD_OK;
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDrawClipperImpl::IsClipListChanged(BOOL* outChanged) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY_STUB("IDirectDrawClipper");
 
-    TRACE_IN("outChanged", outChanged);
-
-    HRESULT hr = DD_OK;
+    TRACE_IN_PARAM("outChanged", outChanged);
 
     if (!outChanged) {
-        hr = DDERR_INVALIDPARAMS;
-        TRACE_RET("ddraw", hr);
-        return hr;
+        TRACE_RETURN(DDERR_INVALIDPARAMS);
     }
 
     *outChanged = FALSE;
 
-    TRACE_OUT("outChanged", outChanged);
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_OUT_PARAM("outChanged", outChanged);
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDrawClipperImpl::SetClipList(LPRGNDATA lpRgnData, DWORD flags) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY_STUB("IDirectDrawClipper");
 
-    TRACE_IN("lpRgnData", lpRgnData);
-    TRACE_IN("flags", flags);
+    TRACE_IN_PARAM("lpRgnData", lpRgnData);
+    TRACE_IN_PARAM("flags", flags);
 
-    HRESULT hr = DD_OK;
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDrawClipperImpl::SetHWnd(DWORD flags, HWND hwnd) -> HRESULT {
-    TRACE_FUNC("ddraw");
+    TRACE_FUNCTION_ENTRY_STUB("IDirectDrawClipper");
 
-    TRACE_IN("flags", flags);
-    TRACE_IN("hwnd", hwnd);
+    TRACE_IN_PARAM("flags", flags);
+    TRACE_IN_PARAM("hwnd", hwnd);
 
-    HRESULT hr = DD_OK;
-    TRACE_RET("ddraw", hr);
-    return hr;
+    TRACE_RETURN(DD_OK);
 }

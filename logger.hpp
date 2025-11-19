@@ -65,23 +65,9 @@ inline void log_value(const DDSURFACEDESC* ddsd)
 }
 
 template<typename T>
-inline void log_in_param(const char* name, const T& value) {
+inline void log_param(const char* name, const T& value) {
     printf("        %-12s = ", name);
     log_value(value);
-    printf("\n");
-}
-
-template<typename T>
-inline void log_out_param(const char* name, const T& value) {
-    printf("        %-12s = ", name);
-    log_value(value);
-
-    if constexpr (std::is_pointer_v<T>) {
-        printf(" (-> ");
-        if (value) log_value(*value); else printf("null");
-        printf(")");
-    }
-
     printf("\n");
 }
 
@@ -130,45 +116,31 @@ struct LogScope {
     }
 };
 
-#define TRACE_FUNC(mod)   LogScope _logscope(__FUNCTION__, mod)
-#define TRACE_IN(name,val)  log_in_param(name, val)
+#define TRACE_FUNCTION_ENTRY(mod)   LogScope _logscope(__FUNCTION__, mod)
+#define TRACE_FUNCTION_ENTRY_STUB(mod)   LogScope _logscope((std::string(__FUNCTION__) + " [UNIMPLEMENTED]").c_str(), mod)
+#define TRACE_IN_PARAM(name,val)  log_param(name, val)
 
-#define TRACE_OUT(name, val)                                                       \
+#define TRACE_OUT_PARAM(name, val)                                                 \
     do {                                                                           \
         _logscope.ensure_out_header();                                             \
-        printf("        %-12s = %p", name, (void*)(val));                          \
-                                                                                   \
-        void* p = (void*)(val);                                                    \
-        if (is_pointer_readable(p)) {                                              \
-            void* inner = nullptr;                                                 \
-            if (is_pointer_readable(&((void**)p)[0])) {                            \
-                inner = ((void**)p)[0];                                            \
-                if (inner && is_pointer_readable(inner))                           \
-                    printf(" (-> %p)", inner);                                     \
-                else                                                               \
-                    printf(" (-> %p INVALID)", inner);                             \
-            } else {                                                               \
-                printf(" (struct)");                                               \
-            }                                                                      \
-        } else {                                                                   \
-            printf(" (INVALID)");                                                  \
-        }                                                                          \
-        printf("\n");                                                              \
+        log_param(name, val);                                                  \
     } while(0)
 
-#define TRACE_RET(mod, val) \
+#define TRACE_RETURN(val) \
     do { \
         printf(") = "); \
         log_value(val); \
         printf("\n\n"); \
+        return val; \
     } while (0)
 
 
 #else
 
-#define TRACE_FUNC(mod)
-#define TRACE_IN(name,val)
-#define TRACE_OUT(name,val)
-#define TRACE_RET(mod, val)
+#define TRACE_FUNCTION_ENTRY(mod)
+#define TRACE_FUNCTION_ENTRY_STUB(mod)
+#define TRACE_IN_PARAM(name,val)
+#define TRACE_OUT_PARAM(name,val)
+#define TRACE_RETURN(val) return val
 
 #endif

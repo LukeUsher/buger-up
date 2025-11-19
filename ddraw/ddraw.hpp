@@ -56,4 +56,3 @@ struct DirectDraw : public IDirectDraw {
 };
 
 extern DirectDraw directDraw;
-

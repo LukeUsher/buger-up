@@ -11,20 +11,31 @@
 #include "game-manager.h"
 #include "patch-engine.h"
 #include "ddraw/ddraw.hpp"
+#include "gdi32/gdi32.hpp"
 #include "thirdparty/xxhash32.h"
 
 GameManager gameManager;
 
 auto GameManager::init() -> bool {
 #if _DEBUG
-	if(AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole()) {
-		FILE* out_stream;
-		FILE* in_stream;
-		FILE* err_stream;
-		freopen_s(&out_stream, "CONOUT$", "wt", stdout);
-		freopen_s(&in_stream, "CONIN$", "rt", stdin);
-		freopen_s(&err_stream, "CONOUT$", "wt", stderr);
-		std::ios::sync_with_stdio(1);
+	auto h = GetStdHandle(STD_OUTPUT_HANDLE);
+	auto type = GetFileType(h);
+
+	auto stdout_redirected = (type == FILE_TYPE_DISK || type == FILE_TYPE_PIPE);
+
+	if (!stdout_redirected) {
+		// Only attach/allocate console when NOT piped
+		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole()) {
+			FILE* out_stream;
+			FILE* in_stream;
+			FILE* err_stream;
+
+			freopen_s(&out_stream, "CONOUT$", "wt", stdout);
+			freopen_s(&in_stream, "CONIN$", "rt", stdin);
+			freopen_s(&err_stream, "CONOUT$", "wt", stderr);
+
+			std::ios::sync_with_stdio(true);
+		}
 	}
 
 	// Give a chance to attach a debugger before proceeding
@@ -47,6 +58,7 @@ auto GameManager::init() -> bool {
 	// Apply any generic patches
 	WinmmJoy::applyPatches();
 	DirectDraw::applyPatches();
+	GDI32::applyPatches();
 	
 	if (_game && !_game->applyPatches(hash)) {
 		MessageBoxA(NULL, hash.c_str(), "Failed to apply game patches", MB_ICONERROR);

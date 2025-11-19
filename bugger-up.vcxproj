@@ -163,6 +163,7 @@
     <ClCompile>
       <PreprocessorDefinitions>BUILD_WINMM=1;_DEBUG;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <Optimization>Disabled</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-winmm|Win32'">
@@ -227,6 +228,7 @@
     <ClCompile Include="ddraw\surface.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="game-manager.cpp" />
+    <ClCompile Include="gdi32\gdi32.cpp" />
     <ClCompile Include="patch-engine.cpp" />
     <ClCompile Include="thirdparty\subhook\subhook.c" />
     <ClCompile Include="wing32.cpp" />
@@ -243,6 +245,7 @@
     <ClInclude Include="games\bug.h" />
     <ClInclude Include="games\comix-zone.h" />
     <ClInclude Include="games\games.h" />
+    <ClInclude Include="gdi32\gdi32.hpp" />
     <ClInclude Include="logger.hpp" />
     <ClInclude Include="patch-engine.h" />
     <ClInclude Include="proxy\ddraw.h" />

@@ -41,7 +41,7 @@ struct BugToo : Game
 	}
 
 	static auto __cdecl ShowMessageBox_Hook(LPCSTR lpCaption, LPCSTR lpText, int type) -> int {
-		auto sub_41D9C1 = (void(__cdecl*)())0x41D9C1;
+		auto sub_41D9C1 = reinterpret_cast<void(__cdecl*)()>(0x41D9C1);
 
 		UINT uType = (type != 0) ? 16 : 48;
 		if (type != 0) sub_41D9C1();

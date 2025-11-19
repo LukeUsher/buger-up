@@ -10,16 +10,16 @@ class PatchEngine {
 public:
 	template<typename T> auto PatchBinary(uintptr_t target, T value) -> void {
 		DWORD oldProtect, tmp;
-		VirtualProtect((void*)target, sizeof(T), PAGE_READWRITE, &oldProtect);
-		*(T*)target = value;
-		VirtualProtect((void*)target, sizeof(T), oldProtect, &tmp);
+		VirtualProtect(reinterpret_cast<void*>(target), sizeof(T), PAGE_READWRITE, &oldProtect);
+		*reinterpret_cast<T*>(target) = value;
+		VirtualProtect(reinterpret_cast<void*>(target), sizeof(T), oldProtect, &tmp);
 	}
 
 	auto PatchBinary(uintptr_t target, std::vector<uint8_t> bytes) -> void {
 		DWORD oldProtect, tmp;
-		VirtualProtect((void*)target, bytes.size(), PAGE_READWRITE, &oldProtect);
-		memcpy((void*)target, bytes.data(), bytes.size());
-		VirtualProtect((void*)target, bytes.size(), oldProtect, &tmp);
+		VirtualProtect(reinterpret_cast<void*>(target), bytes.size(), PAGE_READWRITE, &oldProtect);
+		memcpy(reinterpret_cast<void*>(target), bytes.data(), bytes.size());
+		VirtualProtect(reinterpret_cast<void*>(target), bytes.size(), oldProtect, &tmp);
 	}
 
 	auto PatchFunction(const std::string& name, uintptr_t target, void* detour) -> bool;

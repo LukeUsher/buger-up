@@ -22,6 +22,9 @@
       <Filter>ddraw</Filter>
     </ClCompile>
     <ClCompile Include="wing32.cpp" />
+    <ClCompile Include="gdi32\gdi32.cpp">
+      <Filter>gdi32</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -69,6 +72,9 @@
       <Filter>proxy</Filter>
     </ClInclude>
     <ClInclude Include="logger.hpp" />
+    <ClInclude Include="gdi32\gdi32.hpp">
+      <Filter>gdi32</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="thirdparty">
@@ -82,6 +88,9 @@
     </Filter>
     <Filter Include="proxy">
       <UniqueIdentifier>{a73941b0-36a8-4ce1-a352-38b5a990e764}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gdi32">
+      <UniqueIdentifier>{dee40afe-8f04-417b-a51d-e57d7c79f6f2}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
