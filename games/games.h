@@ -33,6 +33,7 @@ struct Game {
 	virtual auto applyPatches(std::string hash) -> bool { return false; };
 };
 
+#include "baku.h"
 #include "bug.h"
 #include "bug-too.h"
 #include "comix-zone.h"

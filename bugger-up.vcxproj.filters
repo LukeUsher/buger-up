@@ -75,6 +75,9 @@
     <ClInclude Include="gdi32\gdi32.hpp">
       <Filter>gdi32</Filter>
     </ClInclude>
+    <ClInclude Include="games\baku.h">
+      <Filter>games</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="thirdparty">

@@ -4,6 +4,11 @@
 #include <ddraw.h>
 #include <iostream>
 #include <atomic>
+#include <optional>
+#include <vector>
+#include "ddraw.hpp"
+
+struct DirectDrawSurfaceImpl;
 
 struct DirectDrawClipperImpl : public IDirectDrawClipper {
     std::atomic<LONG> refCount{ 1 };
@@ -21,4 +26,9 @@ struct DirectDrawClipperImpl : public IDirectDrawClipper {
     auto __stdcall IsClipListChanged(BOOL*)->HRESULT override;
     auto __stdcall SetClipList(LPRGNDATA, DWORD)->HRESULT override;
     auto __stdcall SetHWnd(DWORD, HWND)->HRESULT override;
+
+    DirectDrawSurfaceImpl* _attachedSurface = nullptr;
+    HWND _hwnd = nullptr;
+
+    std::optional<std::vector<uint8_t>> _staticClipList;
 };

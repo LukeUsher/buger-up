@@ -15,27 +15,27 @@ extern "C" {
 
     __declspec(dllexport) auto __stdcall WinGBitBlt(HDC hdcDst, INT xDst, INT yDst, INT width, INT height, HDC hdcSrc, INT xSrc, INT ySrc) -> BOOL {
         TRACE_FUNCTION_ENTRY("wing32");
-        TRACE_IN_PARAM("hdcDst", hdcDst);
-        TRACE_IN_PARAM("xDst", xDst);
-        TRACE_IN_PARAM("yDst", yDst);
-        TRACE_IN_PARAM("width", width);
-        TRACE_IN_PARAM("height", height);
-        TRACE_IN_PARAM("hdcSrc", hdcSrc);
-        TRACE_IN_PARAM("xSrc", xSrc);
-        TRACE_IN_PARAM("ySrc", ySrc);
+        TRACE_IN_PARAM(hdcDst);
+        TRACE_IN_PARAM(xDst);
+        TRACE_IN_PARAM(yDst);
+        TRACE_IN_PARAM(width);
+        TRACE_IN_PARAM(height);
+        TRACE_IN_PARAM(hdcSrc);
+        TRACE_IN_PARAM(xSrc);
+        TRACE_IN_PARAM(ySrc);
 
         TRACE_RETURN(BitBlt(hdcDst, xDst, yDst, width, height, hdcSrc, xSrc, ySrc, SRCCOPY));
     }
 
     __declspec(dllexport) auto __stdcall WinGCreateBitmap(HDC hdc, BITMAPINFO* bmi, void** bits) -> HBITMAP {
         TRACE_FUNCTION_ENTRY("wing32");
-        TRACE_IN_PARAM("hdc", hdc);
-        TRACE_IN_PARAM("bmi", bmi);
-        TRACE_IN_PARAM("bits", bits);
+        TRACE_IN_PARAM(hdc);
+        TRACE_IN_PARAM(bmi);
+        TRACE_IN_PARAM(bits);
 
         auto r = CreateDIBSection(hdc, bmi, DIB_RGB_COLORS, bits, 0, 0);
 
-        TRACE_OUT_PARAM("bits", bits);
+        TRACE_OUT_PARAM(bits);
         TRACE_RETURN(r);
     }
 
@@ -46,9 +46,9 @@ extern "C" {
 
     __declspec(dllexport) HBRUSH WINAPI WinGCreateHalftoneBrush(HDC hdc, COLORREF color, INT type) {
         TRACE_FUNCTION_ENTRY("wing32");
-        TRACE_IN_PARAM("hdc", hdc);
-        TRACE_IN_PARAM("color", color);
-        TRACE_IN_PARAM("type", type);
+        TRACE_IN_PARAM(hdc);
+        TRACE_IN_PARAM(color);
+        TRACE_IN_PARAM(type);
         TRACE_RETURN(CreateSolidBrush(color));
     }
     
@@ -64,21 +64,21 @@ extern "C" {
 
     __declspec(dllexport) UINT WINAPI WinGGetDIBColorTable(HDC hdc, UINT start, UINT end, RGBQUAD* colors) {
         TRACE_FUNCTION_ENTRY("wing32");
-        TRACE_IN_PARAM("hdc", hdc);
-        TRACE_IN_PARAM("start", start);
-        TRACE_IN_PARAM("end", end);
-        TRACE_IN_PARAM("colors", colors);
+        TRACE_IN_PARAM(hdc);
+        TRACE_IN_PARAM(start);
+        TRACE_IN_PARAM(end);
+        TRACE_IN_PARAM(colors);
 
         auto r = GetDIBColorTable(hdc, start, end, colors);
 
-        TRACE_OUT_PARAM("colors", colors);
+        TRACE_OUT_PARAM(colors);
         TRACE_RETURN(r);
     }
 
     __declspec(dllexport) LPVOID WINAPI WinGGetDIBPointer(HBITMAP hbmp, BITMAPINFO* bmi) {
         TRACE_FUNCTION_ENTRY("wing32");
-        TRACE_IN_PARAM("hbmp", hbmp);
-        TRACE_IN_PARAM("bmi", bmi);
+        TRACE_IN_PARAM(hbmp);
+        TRACE_IN_PARAM(bmi);
 
         DIBSECTION ds;
         LPVOID r = nullptr;
@@ -88,13 +88,13 @@ extern "C" {
             r = ds.dsBm.bmBits;
         }
 
-        TRACE_OUT_PARAM("bmi", bmi);
+        TRACE_OUT_PARAM(bmi);
         TRACE_RETURN(r);
     }
 
     __declspec(dllexport) BOOL WINAPI WinGRecommendDIBFormat(BITMAPINFO* bmi) {
         TRACE_FUNCTION_ENTRY("wing32");
-        TRACE_IN_PARAM("bmi", bmi);
+        TRACE_IN_PARAM(bmi);
 
         BOOL r = FALSE;
 
@@ -110,16 +110,16 @@ extern "C" {
             r = TRUE;
         }
 
-        TRACE_OUT_PARAM("bmi", bmi);
+        TRACE_OUT_PARAM(bmi);
         TRACE_RETURN(r);
     }
     
     __declspec(dllexport) UINT WINAPI WinGSetDIBColorTable(HDC hdc, UINT start, UINT end, RGBQUAD* colors) {
         TRACE_FUNCTION_ENTRY("wing32");
-        TRACE_IN_PARAM("hdc", hdc);
-        TRACE_IN_PARAM("start", start);
-        TRACE_IN_PARAM("end", end);
-        TRACE_IN_PARAM("colors", colors);
+        TRACE_IN_PARAM(hdc);
+        TRACE_IN_PARAM(start);
+        TRACE_IN_PARAM(end);
+        TRACE_IN_PARAM(colors);
 
         auto r = SetDIBColorTable(hdc, start, end, colors);
 
@@ -128,16 +128,16 @@ extern "C" {
 
     __declspec(dllexport) BOOL WINAPI WinGStretchBlt(HDC hdcDst, INT xDst, INT yDst, INT widthDst, INT heightDst, HDC hdcSrc, INT xSrc, INT ySrc, INT widthSrc, INT heightSrc) {
         TRACE_FUNCTION_ENTRY("wing32");
-        TRACE_IN_PARAM("hdcDst", hdcDst);
-        TRACE_IN_PARAM("xDst", xDst);
-        TRACE_IN_PARAM("yDst", yDst);
-        TRACE_IN_PARAM("widthDst", widthDst);
-        TRACE_IN_PARAM("heightDst", heightDst);
-        TRACE_IN_PARAM("hdcSrc", hdcSrc);
-        TRACE_IN_PARAM("xSrc", xSrc);
-        TRACE_IN_PARAM("ySrc", ySrc);
-        TRACE_IN_PARAM("widthSrc", widthSrc);
-        TRACE_IN_PARAM("heightSrc", heightSrc);
+        TRACE_IN_PARAM(hdcDst);
+        TRACE_IN_PARAM(xDst);
+        TRACE_IN_PARAM(yDst);
+        TRACE_IN_PARAM(widthDst);
+        TRACE_IN_PARAM(heightDst);
+        TRACE_IN_PARAM(hdcSrc);
+        TRACE_IN_PARAM(xSrc);
+        TRACE_IN_PARAM(ySrc);
+        TRACE_IN_PARAM(widthSrc);
+        TRACE_IN_PARAM(heightSrc);
 
         int prev = SetStretchBltMode(hdcDst, COLORONCOLOR);
         auto r = StretchBlt(hdcDst, xDst, yDst, widthDst, heightDst, hdcSrc, xSrc, ySrc, widthSrc, heightSrc, SRCCOPY);

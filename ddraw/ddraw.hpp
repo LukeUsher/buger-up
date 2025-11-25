@@ -1,12 +1,11 @@
 #pragma once
 #include <windows.h>
 #include <ddraw.h>
-#include "surface.hpp"
-#include "palette.hpp"
-#include "clipper.hpp"
 #include <iostream>
 #include <mutex>
 #include <SDL3/SDL.h>
+
+struct DirectDrawSurfaceImpl;
 
 struct DirectDraw : public IDirectDraw {
     static auto applyPatches() -> void;
@@ -41,7 +40,6 @@ struct DirectDraw : public IDirectDraw {
 
     HWND _hwnd;
     SDL_Window* _window;
-    SDL_Renderer* _renderer;
     DirectDrawSurfaceImpl* _primarySurface = nullptr;
 
     uint32_t _displayWidth;

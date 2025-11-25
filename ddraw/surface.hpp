@@ -1,11 +1,14 @@
 #pragma once
 #include <Windows.h>
 #include <ddraw.h>
-#include "palette.hpp"
 #include <iostream>
 #include <atomic>
 #include <vector>
 #include <SDL3/SDL.h>
+
+struct DirectDrawPaletteImpl;
+struct DirectDrawSurfaceImpl;
+struct DirectDrawClipperImpl;
 
 struct DirectDrawSurfaceImpl : public IDirectDrawSurface {
     std::atomic<LONG> refCount{ 1 };
@@ -13,9 +16,10 @@ struct DirectDrawSurfaceImpl : public IDirectDrawSurface {
     DDSURFACEDESC desc{};
     bool isPrimary = false;
     SDL_Surface* _surface = nullptr;
-    SDL_Texture* _texture = nullptr;
     DirectDrawPaletteImpl* _palette = nullptr;
     DirectDrawSurfaceImpl* _backbuffer = nullptr;
+	DirectDrawClipperImpl* _clipper = nullptr;
+
     uint64_t _lastBlit = 0;
 
     ~DirectDrawSurfaceImpl();

@@ -50,9 +50,9 @@ auto __stdcall WinmmJoy::MapFaceButtons(WORD xb) -> WORD {
 
 auto __stdcall WinmmJoy::joyGetDevCapsA(UINT_PTR uJoyID, LPJOYCAPSA pjc, UINT cbjc) -> MMRESULT {
     TRACE_FUNCTION_ENTRY("winmm");
-    TRACE_IN_PARAM("uJoyID", uJoyID);
-    TRACE_IN_PARAM("pjc", pjc);
-    TRACE_IN_PARAM("cbjc", cbjc);
+    TRACE_IN_PARAM(uJoyID);
+    TRACE_IN_PARAM(pjc);
+    TRACE_IN_PARAM(cbjc);
 
     if (!pjc || cbjc < sizeof(JOYCAPSA)) {
         TRACE_RETURN(MMSYSERR_INVALPARAM);
@@ -73,7 +73,7 @@ auto __stdcall WinmmJoy::joyGetDevCapsA(UINT_PTR uJoyID, LPJOYCAPSA pjc, UINT cb
     pjc->wPeriodMin = 0;
     pjc->wPeriodMax = 0;
 
-    TRACE_OUT_PARAM("pjc", pjc);
+    TRACE_OUT_PARAM(pjc);
     TRACE_RETURN(JOYERR_NOERROR);
 }
 
@@ -84,8 +84,8 @@ auto __stdcall WinmmJoy::joyGetNumDevs() -> UINT {
 
 auto __stdcall WinmmJoy::joyGetPosEx(UINT uJoyID, LPJOYINFOEX pji) -> MMRESULT {
     TRACE_FUNCTION_ENTRY("winmm");
-    TRACE_IN_PARAM("uJoyID", uJoyID);
-    TRACE_IN_PARAM("pji", pji);
+    TRACE_IN_PARAM(uJoyID);
+    TRACE_IN_PARAM(pji);
 
     if (uJoyID >= 4) {
         TRACE_RETURN(MMSYSERR_NODRIVER);
@@ -158,17 +158,17 @@ auto __stdcall WinmmJoy::joyGetPosEx(UINT uJoyID, LPJOYINFOEX pji) -> MMRESULT {
         pji->dwPOV = JOY_POVCENTERED;
     }
 
-    TRACE_OUT_PARAM("pji", pji);
+    TRACE_OUT_PARAM(pji);
 
     TRACE_RETURN(JOYERR_NOERROR);
 }
 
 auto __stdcall WinmmJoy::joySetCapture(HWND hwnd, UINT uJoyID, UINT uPeriod, BOOL fChanged) -> MMRESULT {
     TRACE_FUNCTION_ENTRY("winmm");
-    TRACE_IN_PARAM("hwnd", hwnd);
-    TRACE_IN_PARAM("uJoyID", uJoyID);
-    TRACE_IN_PARAM("uPeriod", uPeriod);
-    TRACE_IN_PARAM("fChanged", fChanged);
+    TRACE_IN_PARAM(hwnd);
+    TRACE_IN_PARAM(uJoyID);
+    TRACE_IN_PARAM(uPeriod);
+    TRACE_IN_PARAM(fChanged);
 
     if (uJoyID >= 4) {
         TRACE_RETURN(MMSYSERR_NODRIVER);
@@ -191,8 +191,8 @@ auto __stdcall WinmmJoy::joySetCapture(HWND hwnd, UINT uJoyID, UINT uPeriod, BOO
 
 auto __stdcall WinmmJoy::joySetThreshold(UINT uJoyID, UINT uThreshold) -> UINT {
     TRACE_FUNCTION_ENTRY("winmm");
-    TRACE_IN_PARAM("uJoyID", uJoyID);
-    TRACE_IN_PARAM("uThreshold", uThreshold);
+    TRACE_IN_PARAM(uJoyID);
+    TRACE_IN_PARAM(uThreshold);
 
     if (uJoyID >= 4) {
         TRACE_RETURN(MMSYSERR_NODRIVER);

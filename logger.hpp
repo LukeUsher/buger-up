@@ -118,12 +118,12 @@ struct LogScope {
 
 #define TRACE_FUNCTION_ENTRY(mod)   LogScope _logscope(__FUNCTION__, mod)
 #define TRACE_FUNCTION_ENTRY_STUB(mod)   LogScope _logscope((std::string(__FUNCTION__) + " [UNIMPLEMENTED]").c_str(), mod)
-#define TRACE_IN_PARAM(name,val)  log_param(name, val)
+#define TRACE_IN_PARAM(val)  log_param(#val, val)
 
-#define TRACE_OUT_PARAM(name, val)                                                 \
-    do {                                                                           \
-        _logscope.ensure_out_header();                                             \
-        log_param(name, val);                                                  \
+#define TRACE_OUT_PARAM(val)                                                 \
+    do {                                                                     \
+        _logscope.ensure_out_header();                                       \
+        log_param(#val, val);                                                \
     } while(0)
 
 #define TRACE_RETURN(val) \
@@ -139,8 +139,8 @@ struct LogScope {
 
 #define TRACE_FUNCTION_ENTRY(mod)
 #define TRACE_FUNCTION_ENTRY_STUB(mod)
-#define TRACE_IN_PARAM(name,val)
-#define TRACE_OUT_PARAM(name,val)
+#define TRACE_IN_PARAM(val)
+#define TRACE_OUT_PARAM(val)
 #define TRACE_RETURN(val) return val
 
 #endif

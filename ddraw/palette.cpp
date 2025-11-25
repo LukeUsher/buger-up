@@ -5,8 +5,8 @@
 auto DirectDrawPaletteImpl::QueryInterface(REFIID riid, void** ppvObject) -> HRESULT {
     TRACE_FUNCTION_ENTRY("ddraw");
 
-    TRACE_IN_PARAM("riid", &riid);
-    TRACE_IN_PARAM("ppvObject", ppvObject);
+    TRACE_IN_PARAM(riid);
+    TRACE_IN_PARAM(ppvObject);
 
     if (!ppvObject) {
         TRACE_RETURN(E_POINTER);
@@ -21,7 +21,7 @@ auto DirectDrawPaletteImpl::QueryInterface(REFIID riid, void** ppvObject) -> HRE
         TRACE_RETURN(E_NOINTERFACE);
     }
 
-    TRACE_OUT_PARAM("ppvObject", ppvObject);
+    TRACE_OUT_PARAM(ppvObject);
     TRACE_RETURN(DD_OK);
 }
 
@@ -46,9 +46,9 @@ auto DirectDrawPaletteImpl::Release() -> ULONG {
 auto DirectDrawPaletteImpl::Create(DWORD flags, LPPALETTEENTRY entries, IDirectDrawPalette** outPalette) -> HRESULT {
     TRACE_FUNCTION_ENTRY("ddraw");
 
-    TRACE_IN_PARAM("flags", flags);
-    TRACE_IN_PARAM("entries", entries);
-    TRACE_IN_PARAM("outPalette", outPalette);
+    TRACE_IN_PARAM(flags);
+    TRACE_IN_PARAM(entries);
+    TRACE_IN_PARAM(outPalette);
 
     if (!outPalette) {
         TRACE_RETURN(DDERR_INVALIDPARAMS);
@@ -76,14 +76,14 @@ auto DirectDrawPaletteImpl::Create(DWORD flags, LPPALETTEENTRY entries, IDirectD
 
     *outPalette = p;
 
-    TRACE_OUT_PARAM("outPalette", outPalette);
+    TRACE_OUT_PARAM(outPalette);
     TRACE_RETURN(DD_OK);
 }
 
 auto DirectDrawPaletteImpl::GetCaps(LPDWORD outFlags) -> HRESULT {
     TRACE_FUNCTION_ENTRY("ddraw");
 
-    TRACE_IN_PARAM("outFlags", outFlags);
+    TRACE_IN_PARAM(outFlags);
 
     if (!outFlags) {
         TRACE_RETURN(DDERR_INVALIDPARAMS);
@@ -91,17 +91,17 @@ auto DirectDrawPaletteImpl::GetCaps(LPDWORD outFlags) -> HRESULT {
 
     *outFlags = caps;
 
-    TRACE_OUT_PARAM("outFlags", outFlags);
+    TRACE_OUT_PARAM(outFlags);
     TRACE_RETURN(DD_OK);
 }
 
 auto DirectDrawPaletteImpl::GetEntries(DWORD flags, DWORD start, DWORD count, LPPALETTEENTRY outEntries) -> HRESULT {
     TRACE_FUNCTION_ENTRY("ddraw");
 
-    TRACE_IN_PARAM("flags", flags);
-    TRACE_IN_PARAM("start", start);
-    TRACE_IN_PARAM("count", count);
-    TRACE_IN_PARAM("outEntries", outEntries);
+    TRACE_IN_PARAM(flags);
+    TRACE_IN_PARAM(start);
+    TRACE_IN_PARAM(count);
+    TRACE_IN_PARAM(outEntries);
 
     if (!outEntries || !_palette) {
         TRACE_RETURN(DDERR_INVALIDPARAMS);
@@ -121,16 +121,16 @@ auto DirectDrawPaletteImpl::GetEntries(DWORD flags, DWORD start, DWORD count, LP
         outEntries[i].peFlags = 0;
     }
 
-    TRACE_OUT_PARAM("outEntries", outEntries);
+    TRACE_OUT_PARAM(outEntries);
     TRACE_RETURN(DD_OK);
 }
 
 auto DirectDrawPaletteImpl::Initialize(LPDIRECTDRAW lpDD, DWORD flags, LPPALETTEENTRY inEntries) -> HRESULT {
     TRACE_FUNCTION_ENTRY("ddraw");
 
-    TRACE_IN_PARAM("lpDD", lpDD);
-    TRACE_IN_PARAM("flags", flags);
-    TRACE_IN_PARAM("inEntries", inEntries);
+    TRACE_IN_PARAM(lpDD);
+    TRACE_IN_PARAM(flags);
+    TRACE_IN_PARAM(inEntries);
 
     caps = flags;
 
@@ -140,10 +140,10 @@ auto DirectDrawPaletteImpl::Initialize(LPDIRECTDRAW lpDD, DWORD flags, LPPALETTE
 auto DirectDrawPaletteImpl::SetEntries(DWORD flags, DWORD start, DWORD count, LPPALETTEENTRY inEntries) -> HRESULT {
     TRACE_FUNCTION_ENTRY("ddraw");
 
-    TRACE_IN_PARAM("flags", flags);
-    TRACE_IN_PARAM("start", start);
-    TRACE_IN_PARAM("count", count);
-    TRACE_IN_PARAM("inEntries", inEntries);
+    TRACE_IN_PARAM(flags);
+    TRACE_IN_PARAM(start);
+    TRACE_IN_PARAM(count);
+    TRACE_IN_PARAM(inEntries);
 
     if (!inEntries || !_palette) {
         TRACE_RETURN(DDERR_INVALIDPARAMS);

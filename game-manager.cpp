@@ -47,6 +47,7 @@ auto GameManager::init() -> bool {
 	auto hash = getCurrentGameHash();
 	
 	//TODO: Add support for more games/variants
+	if (hash == "61b6daee") _game = std::make_shared<Baku>();
 	if (hash == "1ededa0a") _game = std::make_shared<Bug>();
 	if (hash == "b8446528") _game = std::make_shared<BugToo>();
 	if (hash == "96292a69") _game = std::make_shared<ComixZone>();

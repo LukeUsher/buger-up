@@ -1,5 +1,6 @@
 ﻿#include "gdi32.hpp"
 #include "../ddraw/ddraw.hpp"
+#include "../ddraw/surface.hpp"
 #include "../logger.hpp"
 #include "../patch-engine.h"
 
@@ -57,7 +58,7 @@ auto GDI32::applyPatches() -> void {
 
 auto __stdcall GDI32::CreatePalette(const LOGPALETTE* lpLogPal) -> HPALETTE {
     TRACE_FUNCTION_ENTRY("gdi32");
-    TRACE_IN_PARAM("lpLogPal", lpLogPal);
+    TRACE_IN_PARAM(lpLogPal);
 
     if (!lpLogPal) TRACE_RETURN(nullptr);
 
@@ -76,18 +77,24 @@ auto __stdcall GDI32::CreatePalette(const LOGPALETTE* lpLogPal) -> HPALETTE {
 
 auto __stdcall GDI32::DeleteObject(HGDIOBJ hobj) -> BOOL {
     TRACE_FUNCTION_ENTRY("gdi32");
-    TRACE_IN_PARAM("hobj", hobj);
+    TRACE_IN_PARAM(hobj);
     auto hpal = (HPALETTE)hobj;
-    _logicalPalettes.erase(hpal);
-    _paletteTranslation.erase(hpal);
+    if (auto it = _logicalPalettes.find(hpal) != _logicalPalettes.end()) {
+        _logicalPalettes.erase(hpal);
+    }
+
+    if (auto it = _paletteTranslation.find(hpal) != _paletteTranslation.end()) {
+        _paletteTranslation.erase(hpal);
+    }
+    
     TRACE_RETURN(_DeleteObject(hobj));
 }
 
 auto __stdcall GDI32::SelectPalette(HDC hdc, HPALETTE hpal, BOOL forceBackground) -> HPALETTE {
     TRACE_FUNCTION_ENTRY("gdi32");
-    TRACE_IN_PARAM("hdc", hdc);
-    TRACE_IN_PARAM("hpal", hpal);
-    TRACE_IN_PARAM("forceBackground", forceBackground);
+    TRACE_IN_PARAM(hdc);
+    TRACE_IN_PARAM(hpal);
+    TRACE_IN_PARAM(forceBackground);
     _selectedPaletteForDC[hdc] = hpal;
     TRACE_RETURN(_SelectPalette(hdc, hpal, forceBackground));
 }
@@ -180,7 +187,7 @@ auto GDI32::mergePaletteIntoSystem(HPALETTE hpal) -> void {
 
 auto __stdcall GDI32::RealizePalette(HDC hdc) -> UINT {
     TRACE_FUNCTION_ENTRY("gdi32");
-    TRACE_IN_PARAM("hdc", hdc);
+    TRACE_IN_PARAM(hdc);
 
     auto changed = _RealizePalette(hdc);
 

@@ -241,6 +241,7 @@
     <ClInclude Include="ddraw\palette.hpp" />
     <ClInclude Include="ddraw\surface.hpp" />
     <ClInclude Include="game-manager.h" />
+    <ClInclude Include="games\baku.h" />
     <ClInclude Include="games\bug-too.h" />
     <ClInclude Include="games\bug.h" />
     <ClInclude Include="games\comix-zone.h" />
