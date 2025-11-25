@@ -8,7 +8,7 @@
       <Filter>thirdparty</Filter>
     </ClCompile>
     <ClCompile Include="cd-player.cpp" />
-    <ClCompile Include="winmm-joy.cpp" />
+    <ClCompile Include="winmm.cpp" />
     <ClCompile Include="ddraw\clipper.cpp">
       <Filter>ddraw</Filter>
     </ClCompile>
@@ -43,7 +43,7 @@
       <Filter>games</Filter>
     </ClInclude>
     <ClInclude Include="cd-player.hpp" />
-    <ClInclude Include="winmm-joy.hpp" />
+    <ClInclude Include="winmm.hpp" />
     <ClInclude Include="ddraw\clipper.hpp">
       <Filter>ddraw</Filter>
     </ClInclude>
@@ -76,6 +76,9 @@
       <Filter>gdi32</Filter>
     </ClInclude>
     <ClInclude Include="games\baku.h">
+      <Filter>games</Filter>
+    </ClInclude>
+    <ClInclude Include="games\ecco.h">
       <Filter>games</Filter>
     </ClInclude>
   </ItemGroup>

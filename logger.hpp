@@ -126,14 +126,16 @@ struct LogScope {
         log_param(#val, val);                                                \
     } while(0)
 
-#define TRACE_RETURN(val) \
-    do { \
-        printf(") = "); \
-        log_value(val); \
-        printf("\n\n"); \
-        return val; \
-    } while (0)
+template <class T>
+decltype(auto) trace_return_impl(const char* exprStr, T&& value) {
+    printf(") = ");
+    log_value(value);
+    printf("\n\n");
+    return std::forward<T>(value);
+}
 
+#define TRACE_RETURN(expr) \
+    return trace_return_impl(#expr, (expr))
 
 #else
 

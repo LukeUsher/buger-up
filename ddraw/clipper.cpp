@@ -115,7 +115,7 @@ auto DirectDrawClipperImpl::GetHWnd(HWND* outHwnd) -> HRESULT {
     TRACE_IN_PARAM(outHwnd);
 
     if (!outHwnd) {
-        TRACE_RETU RN(DDERR_INVALIDPARAMS);
+        TRACE_RETURN(DDERR_INVALIDPARAMS);
     }
 
     *outHwnd = _hwnd;

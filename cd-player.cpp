@@ -1,4 +1,5 @@
 #include "cd-player.hpp" 
+#include "game-manager.h"
 
 static constexpr uint32_t sector_size = 2352;
 static constexpr uint32_t pregap_sectors = 150; // ~2s lead-in
@@ -31,9 +32,12 @@ auto CdPlayer::open(uint32_t dataTrackSectors) -> bool {
 	data.isData = true; 
 	data.number = 1; 
 	_tracks.push_back(data); 
-	
-	WIN32_FIND_DATAA fd; 
-	auto hFind = FindFirstFileA("*.bin", &fd);
+
+	auto path = gameManager.getCurrentGameInstallDirectory();
+	std::string search = path + "*.bin";   // no slash needed
+
+	WIN32_FIND_DATAA fd;
+	HANDLE hFind = FindFirstFileA(search.c_str(), &fd);
 	
 	if (hFind == INVALID_HANDLE_VALUE) return false; 
 	
@@ -56,14 +60,14 @@ auto CdPlayer::open(uint32_t dataTrackSectors) -> bool {
 		auto trackNum = atoi(numStr.c_str());
 		if (trackNum < 2) continue; 
 		
-		std::ifstream file(f, std::ios::binary | std::ios::ate); 
+		std::ifstream file(path + f, std::ios::binary | std::ios::ate);
 		if (!file.is_open()) continue; 
 		
 		auto size = file.tellg();
 		auto sectors = (uint32_t)(size / sector_size);
 		
 		CdTrack t; 
-		t.filename = f; 
+		t.filename = path + f; 
 		t.startSector = sector_offset; 
 		t.endSector = sector_offset + sectors - 1; 
 		t.isData = false; 
@@ -101,9 +105,9 @@ auto CdPlayer::trackCount() const -> int {
 } 
 
 auto CdPlayer::trackInfo(int track, uint32_t* start, uint32_t* end) -> bool { 
-	if (track < 1 || track > static_cast<int>(_tracks.size())) return false;
-	*start = _tracks[track - 1].startSector;
-	*end = _tracks[track - 1].endSector;
+	if(track < 1 || track > static_cast<int>(_tracks.size())) return false;
+	if(start) *start = _tracks[track - 1].startSector;
+	if(end) *end = _tracks[track - 1].endSector;
 	return true;
 } 
 

@@ -51,13 +51,14 @@ auto GameManager::init() -> bool {
 	if (hash == "1ededa0a") _game = std::make_shared<Bug>();
 	if (hash == "b8446528") _game = std::make_shared<BugToo>();
 	if (hash == "96292a69") _game = std::make_shared<ComixZone>();
+	if (hash == "a5bd399b") _game = std::make_shared<Ecco>();
 
 	if (!_game) {
 		printf("Unknown game hash: %s: generic patches only!\n", hash.c_str());
 	}
 
 	// Apply any generic patches
-	WinmmJoy::applyPatches();
+	Winmm::applyPatches();
 	DirectDraw::applyPatches();
 	GDI32::applyPatches();
 	

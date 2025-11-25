@@ -25,7 +25,7 @@ auto DirectDraw::flipPrimary() -> bool {
     if (!_primarySurface->_surface) return false;
 
     // In non-exclusive mode, we have to do the final blit using the GDI palette, not the DDD3D palette
-    if ((_cooperativeLevel & DDSCL_EXCLUSIVE) == 0 || !_primarySurface->_palette) {
+    if ((_cooperativeLevel & DDSCL_FULLSCREEN) == 0 || !_primarySurface->_palette) {
         SDL_SetSurfacePalette(_primarySurface->_surface, gdi32._systemPalette);
     } else {
 		SDL_SetSurfacePalette(_primarySurface->_surface, _primarySurface->_palette->_palette);
@@ -33,6 +33,8 @@ auto DirectDraw::flipPrimary() -> bool {
 
 	auto _windowSurface = SDL_GetWindowSurface(_window);
 	if (!_windowSurface) return false;
+
+    SDL_ClearSurface(_windowSurface, 0, 0, 0, 1);
 
     SDL_Rect windowRect;
 	SDL_GetWindowSize(_window, &windowRect.w, &windowRect.h);
@@ -340,6 +342,11 @@ auto DirectDraw::Initialize(GUID* lpGUID) -> HRESULT {
 
 auto DirectDraw::RestoreDisplayMode() -> HRESULT {
     TRACE_FUNCTION_ENTRY_STUB("IDirectDraw");
+
+    if (_primarySurface) {
+        _primarySurface->_lost = true;
+    }
+
     TRACE_RETURN(DD_OK);
 }
 
@@ -371,7 +378,7 @@ auto DirectDraw::SetCooperativeLevel(HWND hwnd, DWORD flags) -> HRESULT {
     }
 
     _cooperativeLevel = flags;
-    Sleep(100);
+    _cooperativeLevelChanged = true;
 
     TRACE_RETURN(DD_OK);
 }
@@ -382,6 +389,10 @@ auto DirectDraw::SetDisplayMode(DWORD w, DWORD h, DWORD bpp) -> HRESULT {
     TRACE_IN_PARAM(w);
     TRACE_IN_PARAM(h);
     TRACE_IN_PARAM(bpp);
+
+    if (_primarySurface) {
+        _primarySurface->_lost = true;
+    }
 
     _displayWidth = w;
     _displayHeight = h;

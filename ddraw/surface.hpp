@@ -19,6 +19,7 @@ struct DirectDrawSurfaceImpl : public IDirectDrawSurface {
     DirectDrawPaletteImpl* _palette = nullptr;
     DirectDrawSurfaceImpl* _backbuffer = nullptr;
 	DirectDrawClipperImpl* _clipper = nullptr;
+    bool _lost = false;
 
     uint64_t _lastBlit = 0;
 

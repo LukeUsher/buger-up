@@ -2,12 +2,13 @@
 
 #include <windows.h>
 #include <mmsystem.h>
+#include <mciapi.h>
 #include <xinput.h>
 #include <atomic>
 #include <thread>
 #include <map>
 
-struct WinmmJoy {
+struct Winmm {
     enum class DpadMode {
         POV,
         Axis,
@@ -26,6 +27,8 @@ struct WinmmJoy {
         ~JoyCapture();
     };
 
+    int maxJoysticks;
+
     static auto applyPatches() -> void;
 
     inline static DpadMode dpadMode = DpadMode::Axis;
@@ -35,13 +38,18 @@ struct WinmmJoy {
     static auto  __stdcall MapFaceButtons(WORD xb) -> WORD;
 
     static auto __stdcall joyGetDevCapsA(UINT_PTR uJoyID, LPJOYCAPSA pjc, UINT cbjc) -> MMRESULT;
+    static auto __stdcall joyGetPos(UINT uJoyID, LPJOYINFO pji)->MMRESULT;
     static auto __stdcall joyGetPosEx(UINT uJoyID, LPJOYINFOEX pji) -> MMRESULT;
     static auto __stdcall joyGetNumDevs() -> UINT;
     static auto __stdcall joySetCapture(HWND hwnd, UINT uJoyID, UINT uPeriod, BOOL fChanged) -> MMRESULT;
     static auto __stdcall joySetThreshold(UINT uJoyID, UINT uThreshold) -> MMRESULT;
 
+	static auto __stdcall mciGetDeviceIDA(LPCSTR szDevice, LPSTR lpAlias) -> MCIDEVICEID;
+	static auto __stdcall mciSendCommandA(MCIDEVICEID IDDevice, UINT uMsg, DWORD_PTR dwParam1, DWORD_PTR dwParam2) -> MCIERROR;
 private:
     static auto PollJoystick(JoyCapture* capture) -> void;
 
     inline static std::map<UINT, JoyCapture> captures{};
 };
+
+extern Winmm winmm;

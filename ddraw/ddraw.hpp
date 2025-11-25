@@ -49,6 +49,7 @@ struct DirectDraw : public IDirectDraw {
     uint32_t _windowDisplayWidth;
     uint32_t _windowDisplayHeight;
     uint32_t _cooperativeLevel;
+    bool _cooperativeLevelChanged;
 
     auto _findMainWindow() -> HWND;
 };

@@ -97,7 +97,10 @@ auto DirectDrawSurfaceImpl::Create(LPDDSURFACEDESC desc, IDirectDrawSurface** ou
    
         *outSurface = directDraw._primarySurface;
 
-        SDL_SetWindowFullscreen(directDraw._window, (directDraw._cooperativeLevel & DDSCL_FULLSCREEN) != 0);
+        if (directDraw._cooperativeLevelChanged) {
+            SDL_SetWindowFullscreen(directDraw._window, (directDraw._cooperativeLevel & DDSCL_FULLSCREEN) != 0);
+            directDraw._cooperativeLevelChanged = false;
+        }
 
         TRACE_OUT_PARAM(outSurface);
         TRACE_RETURN(DD_OK);
@@ -189,6 +192,8 @@ auto DirectDrawSurfaceImpl::Blt(LPRECT dstRect, LPDIRECTDRAWSURFACE lpDDSrc, LPR
         TRACE_RETURN(DD_OK);
     }
 
+    if (_lost) TRACE_RETURN(DDERR_SURFACELOST);
+
     if ((dwFlags & DDBLT_COLORFILL) && lpDDBltFX) {
         SDL_LockSurface(_surface);
         auto pixels = static_cast<uint8_t*>(_surface->pixels);
@@ -261,6 +266,10 @@ auto DirectDrawSurfaceImpl::Blt(LPRECT dstRect, LPDIRECTDRAWSURFACE lpDDSrc, LPR
         }
     }
 
+    if (directDraw._cooperativeLevel & DDSCL_FULLSCREEN) {
+        TRACE_RETURN(DD_OK);
+    }
+
     if (isPrimary && !directDraw.flipPrimary()) {
         TRACE_RETURN(DDERR_INCOMPATIBLEPRIMARY);
     }
@@ -290,10 +299,9 @@ auto DirectDrawSurfaceImpl::BltFast(DWORD dwX, DWORD dwY, LPDIRECTDRAWSURFACE lp
         TRACE_RETURN(DDERR_BLTFASTCANTCLIP);
     }
 
-    auto src = static_cast<DirectDrawSurfaceImpl*>(lpDDSrc);
+    if (_lost) TRACE_RETURN(DDERR_SURFACELOST);
 
-    SDL_SetSurfacePalette(src->_surface, gdi32._systemPalette);
-    SDL_SetSurfacePalette(_surface, gdi32._systemPalette);
+    auto src = static_cast<DirectDrawSurfaceImpl*>(lpDDSrc);
 
     RECT srect{};
     if (srcRect) {
@@ -326,9 +334,19 @@ auto DirectDrawSurfaceImpl::BltFast(DWORD dwX, DWORD dwY, LPDIRECTDRAWSURFACE lp
     SDL_Rect sdlSrc = { srect.left, srect.top, width, height };
     SDL_Rect sdlDst = { drect.left, drect.top, width, height };
 
-    if (!SDL_BlitSurface(src->_surface, &sdlSrc, _surface, &sdlDst)) {
+    //If both services are 8bpp paletted use StretchSurface instead of BlitSurfaceScaled to avoid expensive per-pixel colour lookups
+    if (SDL_BYTESPERPIXEL(_surface->format) == 1 && SDL_BYTESPERPIXEL(src->_surface->format) == 1) {
+        if (!SDL_StretchSurface(src->_surface, &sdlSrc, _surface, &sdlDst, SDL_SCALEMODE_NEAREST)) {
+            printf("SDL_StretchSurface failed: %s\n", SDL_GetError());
+            TRACE_RETURN(DDERR_INVALIDPIXELFORMAT);
+        }
+    } else if (!SDL_BlitSurface(src->_surface, &sdlSrc, _surface, &sdlDst)) {
         printf("SDL_BlitSurface failed: %s\n", SDL_GetError());
         TRACE_RETURN(DDERR_INVALIDPIXELFORMAT);
+    }
+
+    if (directDraw._cooperativeLevel & DDSCL_FULLSCREEN) {
+        TRACE_RETURN(DD_OK);
     }
 
     if (isPrimary && !directDraw.flipPrimary()) {
@@ -353,8 +371,10 @@ auto DirectDrawSurfaceImpl::EnumOverlayZOrders(DWORD, LPVOID, LPDDENUMSURFACESCA
     TRACE_RETURN(DD_OK);
 }
 
-auto DirectDrawSurfaceImpl::Flip(LPDIRECTDRAWSURFACE, DWORD) -> HRESULT {
+auto DirectDrawSurfaceImpl::Flip(LPDIRECTDRAWSURFACE lpDDSurfaceTargetOverride, DWORD dwFlags) -> HRESULT {
     TRACE_FUNCTION_ENTRY("ddraw");
+    TRACE_IN_PARAM(lpDDSurfaceTargetOverride);
+    TRACE_IN_PARAM(dwFlags);
 
     if (!isPrimary || !_backbuffer || !_surface) {
         TRACE_RETURN(DDERR_NOTFLIPPABLE);
@@ -371,7 +391,7 @@ auto DirectDrawSurfaceImpl::Flip(LPDIRECTDRAWSURFACE, DWORD) -> HRESULT {
     TRACE_RETURN(DD_OK);
 }
 
-auto DirectDrawSurfaceImpl::GetAttachedSurface(LPDDSCAPS /*caps*/, LPDIRECTDRAWSURFACE* ppSurface) -> HRESULT {
+auto DirectDrawSurfaceImpl::GetAttachedSurface(LPDDSCAPS lpDDSCaps, LPDIRECTDRAWSURFACE* ppSurface) -> HRESULT {
     TRACE_FUNCTION_ENTRY("ddraw");
 
     TRACE_IN_PARAM(ppSurface);
@@ -380,15 +400,22 @@ auto DirectDrawSurfaceImpl::GetAttachedSurface(LPDDSCAPS /*caps*/, LPDIRECTDRAWS
         TRACE_RETURN(E_POINTER);
     }
 
-    if (!isPrimary || !_backbuffer) {
-        TRACE_RETURN(DDERR_NOTFOUND);
-    }
+    if (_lost) TRACE_RETURN(DDERR_SURFACELOST);
 
-    *ppSurface = _backbuffer;
-    _backbuffer->AddRef();
+    if(lpDDSCaps->dwCaps & DDSCAPS_BACKBUFFER) {
+        if (!isPrimary || !_backbuffer) {
+            TRACE_RETURN(DDERR_NOTFOUND);
+        }
+
+        *ppSurface = _backbuffer;
+        _backbuffer->AddRef();
+
+		TRACE_OUT_PARAM(ppSurface);
+        TRACE_RETURN(DD_OK);
+	}
 
     TRACE_OUT_PARAM(ppSurface);
-    TRACE_RETURN(DD_OK);
+    TRACE_RETURN(DDERR_INVALIDPARAMS);
 }
 
 auto DirectDrawSurfaceImpl::GetBltStatus(DWORD flags) -> HRESULT {
@@ -411,6 +438,8 @@ auto DirectDrawSurfaceImpl::GetCaps(LPDDSCAPS) -> HRESULT {
 
 auto DirectDrawSurfaceImpl::GetClipper(LPDIRECTDRAWCLIPPER*) -> HRESULT {
     TRACE_FUNCTION_ENTRY_STUB("ddraw");
+    if (_lost) TRACE_RETURN(DDERR_SURFACELOST);
+
     TRACE_RETURN(DD_OK);
 }
 
@@ -421,6 +450,9 @@ auto DirectDrawSurfaceImpl::GetColorKey(DWORD, LPDDCOLORKEY) -> HRESULT {
 
 auto DirectDrawSurfaceImpl::GetDC(HDC*) -> HRESULT {
     TRACE_FUNCTION_ENTRY_STUB("ddraw");
+
+    if (_lost) TRACE_RETURN(DDERR_SURFACELOST);
+
     TRACE_RETURN(DDERR_UNSUPPORTED);
 }
 
@@ -447,6 +479,9 @@ auto DirectDrawSurfaceImpl::GetPixelFormat(LPDDPIXELFORMAT) -> HRESULT {
 auto DirectDrawSurfaceImpl::GetSurfaceDesc(LPDDSURFACEDESC lpDesc) -> HRESULT {
     TRACE_FUNCTION_ENTRY("ddraw");
 	TRACE_IN_PARAM(lpDesc);
+
+    if (_lost) TRACE_RETURN(DDERR_SURFACELOST);
+
     *lpDesc = desc;
     TRACE_OUT_PARAM(lpDesc);
     TRACE_RETURN(DD_OK);
@@ -459,6 +494,9 @@ auto DirectDrawSurfaceImpl::Initialize(LPDIRECTDRAW, LPDDSURFACEDESC) -> HRESULT
 
 auto DirectDrawSurfaceImpl::IsLost() -> HRESULT {
     TRACE_FUNCTION_ENTRY_STUB("ddraw");
+
+    if (_lost) TRACE_RETURN(DDERR_SURFACELOST);
+
     TRACE_RETURN(DD_OK);
 }
 
@@ -510,6 +548,7 @@ auto DirectDrawSurfaceImpl::ReleaseDC(HDC) -> HRESULT {
 
 auto DirectDrawSurfaceImpl::Restore() -> HRESULT {
     TRACE_FUNCTION_ENTRY_STUB("ddraw");
+	_lost = false;
     TRACE_RETURN(DD_OK);
 }
 
@@ -581,6 +620,10 @@ auto DirectDrawSurfaceImpl::Unlock(LPVOID) -> HRESULT {
     }
 
     SDL_UnlockSurface(_surface);
+
+    if (directDraw._cooperativeLevel & DDSCL_FULLSCREEN) {
+        TRACE_RETURN(DD_OK);
+    }
 
     if (isPrimary && !directDraw.flipPrimary()) {
         TRACE_RETURN(DDERR_INCOMPATIBLEPRIMARY);

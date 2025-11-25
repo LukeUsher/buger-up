@@ -39,6 +39,20 @@ public:
 
     auto position() const -> uint32_t;
 
+    auto trackFromPosition(uint32_t position) -> int {
+        for (size_t i = 0; i < _tracks.size(); i++) {
+            if (position >= _tracks[i].startSector && position <= _tracks[i].endSector) {
+                return static_cast<int>(i + 1);
+            }
+        }
+        return -1;
+	}
+
+    auto trackStartSector(int track) -> uint32_t {
+        if (track < 1 || track > static_cast<int>(_tracks.size())) return 0;
+        return _tracks[track - 1].startSector;
+	}
+
 private:
     auto playbackThread() -> void;
 

@@ -232,7 +232,7 @@
     <ClCompile Include="patch-engine.cpp" />
     <ClCompile Include="thirdparty\subhook\subhook.c" />
     <ClCompile Include="wing32.cpp" />
-    <ClCompile Include="winmm-joy.cpp" />
+    <ClCompile Include="winmm.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cd-player.hpp" />
@@ -245,6 +245,7 @@
     <ClInclude Include="games\bug-too.h" />
     <ClInclude Include="games\bug.h" />
     <ClInclude Include="games\comix-zone.h" />
+    <ClInclude Include="games\ecco.h" />
     <ClInclude Include="games\games.h" />
     <ClInclude Include="gdi32\gdi32.hpp" />
     <ClInclude Include="logger.hpp" />
@@ -255,7 +256,7 @@
     <ClInclude Include="proxy\ws2_32.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="thirdparty\xxhash32.h" />
-    <ClInclude Include="winmm-joy.hpp" />
+    <ClInclude Include="winmm.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="thirdparty\SDL3\VisualC\SDL\SDL.vcxproj">
