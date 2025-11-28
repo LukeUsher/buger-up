@@ -6,13 +6,11 @@
 
 Winmm winmm;
 
-using mciGetDeviceIDA_t = MCIDEVICEID(WINAPI*)(LPCSTR pszDevice, LPSTR pszAlias);
-using mciSendCommandA_t = MCIERROR(WINAPI*)(MCIDEVICEID IDDevice, UINT uMsg, DWORD_PTR fdwCommand, DWORD_PTR dwParam);
-static inline mciGetDeviceIDA_t _mciGetDeviceIDA = nullptr;
-static inline mciSendCommandA_t _mciSendCommandA = nullptr;
+static inline decltype(&mciGetDeviceIDA) _mciGetDeviceIDA = nullptr;
+static inline decltype(&mciSendCommandA) _mciSendCommandA = nullptr;
 
 static const MCIDEVICEID CD_DEVICE_ID = 0x1234;
-static auto _cdTimeFormat = MCI_FORMAT_TMSF;
+static auto _cdTimeFormat = MCI_FORMAT_MSF;
 
 auto Winmm::applyPatches() -> void {
 	winmm.maxJoysticks = 4; // Default to 4 joysticks, games may override this
@@ -244,11 +242,10 @@ auto __stdcall Winmm::joySetThreshold(UINT uJoyID, UINT uThreshold) -> UINT {
     TRACE_RETURN(JOYERR_NOERROR);
 }
 
-auto __stdcall Winmm::mciGetDeviceIDA(LPCSTR szDevice, LPSTR lpAlias) -> MCIDEVICEID {
+auto __stdcall Winmm::mciGetDeviceIDA(LPCSTR szDevice) -> MCIDEVICEID {
     TRACE_FUNCTION_ENTRY_STUB("winmm");
 	TRACE_IN_PARAM(szDevice);
-	TRACE_IN_PARAM(lpAlias);
-	TRACE_RETURN(_mciGetDeviceIDA(szDevice, lpAlias));
+	TRACE_RETURN(_mciGetDeviceIDA(szDevice));
 }
 
 auto __stdcall Winmm::mciSendCommandA(MCIDEVICEID IDDevice, UINT uMsg, DWORD_PTR fdwCommand, DWORD_PTR dwParam) -> MCIERROR {
@@ -260,6 +257,7 @@ auto __stdcall Winmm::mciSendCommandA(MCIDEVICEID IDDevice, UINT uMsg, DWORD_PTR
 
     if (uMsg == MCI_OPEN) {
         auto* open = reinterpret_cast<MCI_OPEN_PARMSA*>(dwParam);
+        TRACE_IN_PARAM(open);
 
         const bool isCDAudio = (fdwCommand & MCI_OPEN_TYPE) && open->lpstrDeviceType && (_stricmp(open->lpstrDeviceType, "cdaudio") == 0);
         if (isCDAudio) {
@@ -277,10 +275,11 @@ auto __stdcall Winmm::mciSendCommandA(MCIDEVICEID IDDevice, UINT uMsg, DWORD_PTR
 
     switch (uMsg) {
         case MCI_CLOSE:
-            cdPlayer.stop();
+            cdPlayer.close();
             TRACE_RETURN(0);
         case MCI_PLAY: {
             auto* play = reinterpret_cast<MCI_PLAY_PARMS*>(dwParam);
+            TRACE_IN_PARAM(play);
 
             uint32_t startSector = cdPlayer.position();
             uint32_t endSector = UINT32_MAX;
@@ -350,6 +349,14 @@ auto __stdcall Winmm::mciSendCommandA(MCIDEVICEID IDDevice, UINT uMsg, DWORD_PTR
             }
 
             cdPlayer.playSectors(startSector, endSector);
+
+            if (fdwCommand & MCI_NOTIFY) {
+                HWND cb = (HWND)play->dwCallback;
+                winmm.mciNotifyRegister(cb, true);
+            } else {
+                winmm.mciNotifyClear();
+            }
+
             TRACE_RETURN(0);
         }
         case MCI_STOP:
@@ -362,8 +369,10 @@ auto __stdcall Winmm::mciSendCommandA(MCIDEVICEID IDDevice, UINT uMsg, DWORD_PTR
             cdPlayer.resume();
             TRACE_RETURN(0);
         case MCI_SET: {
+            auto* setp = reinterpret_cast<MCI_SET_PARMS*>(dwParam);
+            TRACE_IN_PARAM(setp);
+
             if (fdwCommand & MCI_SET_TIME_FORMAT) {
-                auto* setp = reinterpret_cast<MCI_SET_PARMS*>(dwParam);
                 _cdTimeFormat = setp->dwTimeFormat;
             }
 
@@ -371,89 +380,105 @@ auto __stdcall Winmm::mciSendCommandA(MCIDEVICEID IDDevice, UINT uMsg, DWORD_PTR
         }
         case MCI_STATUS: {
             auto* st = reinterpret_cast<MCI_STATUS_PARMS*>(dwParam);
+            TRACE_IN_PARAM(st);
 
-            switch (st->dwItem) {
-                case MCI_STATUS_MODE:
-                    st->dwReturn = cdPlayer.position() > 0 ? MCI_MODE_PLAY : MCI_MODE_STOP;
-                    TRACE_RETURN(0);
-                case MCI_STATUS_MEDIA_PRESENT:
-                    st->dwReturn = 1;
-                    TRACE_RETURN(0);
-                case MCI_STATUS_NUMBER_OF_TRACKS:
-                    st->dwReturn = cdPlayer.trackCount();
-                    TRACE_RETURN(0);
-                case MCI_STATUS_LENGTH: {
-                    uint32_t start = 0;
-                    uint32_t end = 0;
+            if (fdwCommand & MCI_STATUS_ITEM) {
+                TRACE_IN_PARAM(st->dwItem);
 
-                    if (fdwCommand & MCI_TRACK) {
-                        const int track = st->dwTrack;
-                        if (!cdPlayer.trackInfo(track, &start, &end)) TRACE_RETURN(MCIERR_BAD_INTEGER);
-                    } else {
-                        const int last = cdPlayer.trackCount();
-                        if (last <= 0) TRACE_RETURN(MCIERR_DEVICE_NOT_READY);
+                switch (st->dwItem) {
+                    case MCI_STATUS_MODE:
+                        st->dwReturn = cdPlayer.playing() ? MCI_MODE_PLAY : MCI_MODE_STOP;
+                        TRACE_RETURN(0);
+                    case MCI_STATUS_MEDIA_PRESENT:
+                        st->dwReturn = 1;
+                        TRACE_RETURN(0);
+                    case MCI_STATUS_NUMBER_OF_TRACKS:
+                        st->dwReturn = cdPlayer.trackCount();
+                        TRACE_RETURN(0);
+                    case MCI_STATUS_CURRENT_TRACK:
+                        st->dwReturn = cdPlayer.trackFromPosition(cdPlayer.position());
+                        TRACE_RETURN(0);
+                    case MCI_STATUS_TIME_FORMAT:
+                        st->dwReturn = _cdTimeFormat;
+                        TRACE_RETURN(0);
+                    case MCI_STATUS_LENGTH: {
+                        uint32_t start = 0;
+                        uint32_t end = 0;
 
-                        if (!cdPlayer.trackInfo(1, &start, nullptr)) TRACE_RETURN(MCIERR_BAD_INTEGER);
+                        if ((fdwCommand & MCI_TRACK)) {
+                            const int track = st->dwTrack;
+                            if (!cdPlayer.trackInfo(track, &start, &end)) TRACE_RETURN(MCIERR_BAD_INTEGER);
+                        }  else {
+                            const int last = cdPlayer.trackCount();
+                            if (last <= 0) TRACE_RETURN(MCIERR_DEVICE_NOT_READY);
 
-                        uint32_t endDisc = 0;
-                        if (!cdPlayer.trackInfo(last, nullptr, &endDisc)) TRACE_RETURN(MCIERR_BAD_INTEGER);
-                        end = endDisc;
-                    }
+                            if (!cdPlayer.trackInfo(1, &start, nullptr)) TRACE_RETURN(MCIERR_BAD_INTEGER);
 
-                    uint32_t length = (end > start) ? (end - start) : 0;
+                            uint32_t endDisc = 0;
+                            if (!cdPlayer.trackInfo(last, nullptr, &endDisc)) TRACE_RETURN(MCIERR_BAD_INTEGER);
+                            end = endDisc;
+                        }
 
-                    if (_cdTimeFormat == MCI_FORMAT_MSF) {
-                        int m = length / (75 * 60);
-                        int s = (length / 75) % 60;
-                        int f = length % 75;
+                        uint32_t length = (end > start) ? (end - start) : 0;
 
-                        st->dwReturn = MCI_MAKE_MSF(m, s, f);
+                        if (_cdTimeFormat == MCI_FORMAT_MSF) {
+                            int m = length / (75 * 60);
+                            int s = (length / 75) % 60;
+                            int f = length % 75;
+
+                            st->dwReturn = MCI_MAKE_MSF(m, s, f);
+                            TRACE_RETURN(0);
+                        }
+
+                        if (_cdTimeFormat == MCI_FORMAT_TMSF) {
+                            int track = (fdwCommand & MCI_TRACK) ? st->dwTrack : 0;
+
+                            int m = length / (75 * 60);
+                            int s = (length / 75) % 60;
+                            int f = length % 75;
+
+                            st->dwReturn = MCI_MAKE_TMSF(track, m, s, f);
+                            TRACE_RETURN(0);
+                        }
+
+                        st->dwReturn = length;
                         TRACE_RETURN(0);
                     }
+                    case MCI_STATUS_POSITION: {
+                        uint32_t pos = cdPlayer.position();
+                        if (pos == 0) pos = cdPlayer.trackStartSector(1);
 
-                    if (_cdTimeFormat == MCI_FORMAT_TMSF) {
-                        int track = (fdwCommand & MCI_TRACK) ? st->dwTrack : 0;
+                        if (fdwCommand & MCI_TRACK) {
+                            pos = cdPlayer.trackStartSector(st->dwTrack);
+                        }
 
-                        int m = length / (75 * 60);
-                        int s = (length / 75) % 60;
-                        int f = length % 75;
+                        if (_cdTimeFormat == MCI_FORMAT_MSF) {
+                            int m = pos / (75 * 60);
+                            int s2 = (pos / 75) % 60;
+                            int f = pos % 75;
 
-                        st->dwReturn = MCI_MAKE_TMSF(track, m, s, f);
+                            st->dwReturn = MCI_MAKE_MSF(m, s2, f);
+                            TRACE_RETURN(0);
+                        }
+
+                        if (_cdTimeFormat == MCI_FORMAT_TMSF) {
+                            int track = cdPlayer.trackFromPosition(pos);
+
+                            uint32_t trackStart = cdPlayer.trackStartSector(track);
+                            uint32_t offset = pos - trackStart;
+
+                            int m = offset / (75 * 60);
+                            int s = (offset / 75) % 60;
+                            int f = offset % 75;
+
+                            st->dwReturn = MCI_MAKE_TMSF(track, m, s, f);
+                            TRACE_RETURN(0);
+                        }
+
+                        st->dwReturn = pos;
                         TRACE_RETURN(0);
                     }
-
-                    st->dwReturn = length;
-                    TRACE_RETURN(0);
                 }
-                case MCI_STATUS_POSITION: {
-                    uint32_t pos = cdPlayer.position();
-
-                    if (_cdTimeFormat == MCI_FORMAT_MSF) {
-                        int m = pos / (75 * 60);
-                        int s2 = (pos / 75) % 60;
-                        int f = pos % 75;
-
-                        st->dwReturn = MCI_MAKE_MSF(m, s2, f);
-                        TRACE_RETURN(0);
-                    }
-
-                    if (_cdTimeFormat == MCI_FORMAT_TMSF) {
-                        int track = cdPlayer.trackFromPosition(pos);
-
-                        uint32_t trackStart = cdPlayer.trackStartSector(track);
-                        uint32_t offset = pos - trackStart;
-
-                        int m = offset / (75 * 60);
-                        int s = (offset / 75) % 60;
-                        int f = offset % 75;
-
-                        st->dwReturn = MCI_MAKE_TMSF(track, m, s, f);
-                        TRACE_RETURN(0);
-                    }
-
-                    st->dwReturn = pos;
-                    TRACE_RETURN(0);
-                }   
             }
         }
     }
@@ -461,8 +486,30 @@ auto __stdcall Winmm::mciSendCommandA(MCIDEVICEID IDDevice, UINT uMsg, DWORD_PTR
 	TRACE_RETURN(MCIERR_UNSUPPORTED_FUNCTION);
 }
 
+auto Winmm::mciNotifyRegister(HWND hwnd, bool enabled) -> void {
+    HWND old = _mciNotifyHwnd;
+    bool oldEnabled = _mciNotifyEnabled;
+    if (oldEnabled && old && old != hwnd) {
+        PostMessage(old, MM_MCINOTIFY, MCI_NOTIFY_SUPERSEDED, CD_DEVICE_ID);
+    }
+    _mciNotifyHwnd = hwnd;
+    _mciNotifyEnabled = enabled;
+}
+
+auto Winmm::mciNotifyClear() -> void {
+    _mciNotifyEnabled = false;
+    _mciNotifyHwnd = nullptr;
+}
+
+auto Winmm::mciNotifyCd(UINT status) -> void {
+    HWND hwnd = _mciNotifyHwnd;
+    if (_mciNotifyEnabled && hwnd) {
+        PostMessage(hwnd, MM_MCINOTIFY, status, CD_DEVICE_ID);
+    }
+}
+
 auto Winmm::PollJoystick(JoyCapture* capture) -> void {
-    while (capture->active.load()) {
+    while (capture->active) {
         XINPUT_STATE state{};
         if (XInputGetState(capture->uJoyID, &state) != ERROR_SUCCESS) {
             Sleep(capture->uPeriod);

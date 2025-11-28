@@ -52,6 +52,7 @@ auto GameManager::init() -> bool {
 	if (hash == "b8446528") _game = std::make_shared<BugToo>();
 	if (hash == "96292a69") _game = std::make_shared<ComixZone>();
 	if (hash == "a5bd399b") _game = std::make_shared<Ecco>();
+	if (hash == "71d1c721") _game = std::make_shared<Panzer>();
 
 	if (!_game) {
 		printf("Unknown game hash: %s: generic patches only!\n", hash.c_str());

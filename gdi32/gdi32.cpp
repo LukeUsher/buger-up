@@ -6,17 +6,11 @@
 
 GDI32 gdi32;
 
-using CreatePalette_t = HPALETTE(WINAPI*)(const LOGPALETTE*);
-using DeleteObject_t = BOOL(WINAPI*)(HGDIOBJ);
-using AnimatePalette_t = BOOL(WINAPI*)(HPALETTE, UINT, UINT, const PALETTEENTRY*);
-using SelectPalette_t = HPALETTE(WINAPI*)(HDC, HPALETTE, BOOL);
-using RealizePalette_t = UINT(WINAPI*)(HDC);
-
-static inline CreatePalette_t   _CreatePalette = nullptr;
-static inline DeleteObject_t    _DeleteObject = nullptr;
-static inline AnimatePalette_t  _AnimatePalette = nullptr;
-static inline SelectPalette_t   _SelectPalette = nullptr;
-static inline RealizePalette_t  _RealizePalette = nullptr;
+static inline decltype(&CreatePalette) _CreatePalette = nullptr;
+static inline decltype(&AnimatePalette) _AnimatePalette = nullptr;
+static inline decltype(&SelectPalette) _SelectPalette = nullptr;
+static inline decltype(&RealizePalette) _RealizePalette = nullptr;
+static inline decltype(&DeleteObject) _DeleteObject = nullptr;
 
 static const int StaticSystemColors[20] = {
     0,1,2,3,4,5,6,7,8,9,

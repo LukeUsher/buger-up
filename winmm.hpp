@@ -44,12 +44,20 @@ struct Winmm {
     static auto __stdcall joySetCapture(HWND hwnd, UINT uJoyID, UINT uPeriod, BOOL fChanged) -> MMRESULT;
     static auto __stdcall joySetThreshold(UINT uJoyID, UINT uThreshold) -> MMRESULT;
 
-	static auto __stdcall mciGetDeviceIDA(LPCSTR szDevice, LPSTR lpAlias) -> MCIDEVICEID;
+	static auto __stdcall mciGetDeviceIDA(LPCSTR szDevice) -> MCIDEVICEID;
 	static auto __stdcall mciSendCommandA(MCIDEVICEID IDDevice, UINT uMsg, DWORD_PTR dwParam1, DWORD_PTR dwParam2) -> MCIERROR;
+
+    auto mciNotifyRegister(HWND hwnd, bool enabled) -> void;
+    auto mciNotifyClear() -> void;
+    auto mciNotifyCd(UINT status) -> void;
+
 private:
     static auto PollJoystick(JoyCapture* capture) -> void;
 
     inline static std::map<UINT, JoyCapture> captures{};
+
+    std::atomic<HWND> _mciNotifyHwnd = nullptr;
+    std::atomic<bool> _mciNotifyEnabled = false;
 };
 
 extern Winmm winmm;

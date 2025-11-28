@@ -1,5 +1,6 @@
-#include "cd-player.hpp" 
+#include "cd-player.hpp"
 #include "game-manager.h"
+#include "winmm.hpp"
 
 static constexpr uint32_t sector_size = 2352;
 static constexpr uint32_t pregap_sectors = 150; // ~2s lead-in
@@ -47,8 +48,8 @@ auto CdPlayer::open(uint32_t dataTrackSectors) -> bool {
 	} while (FindNextFileA(hFind, &fd)); 
 	FindClose(hFind); 
 	
-	std::sort(files.begin(), files.end()); 
-	
+	sort(files.begin(), files.end());
+
 	auto sector_offset = data.endSector + 1;
 	for (auto& f : files) { 
 		auto pos1 = f.find("(Track ");
@@ -60,8 +61,8 @@ auto CdPlayer::open(uint32_t dataTrackSectors) -> bool {
 		auto trackNum = atoi(numStr.c_str());
 		if (trackNum < 2) continue; 
 		
-		std::ifstream file(path + f, std::ios::binary | std::ios::ate);
-		if (!file.is_open()) continue; 
+		auto file = std::ifstream(path + f, std::ios::binary | std::ios::ate);
+		if (!file.is_open()) continue;
 		
 		auto size = file.tellg();
 		auto sectors = (uint32_t)(size / sector_size);
@@ -84,14 +85,21 @@ auto CdPlayer::open(uint32_t dataTrackSectors) -> bool {
 	return _tracks.size() > 1;
 } 
 
-auto CdPlayer::close() -> void { 
+auto CdPlayer::close() -> void {
 	stop();
 	_terminating = true; 
 	if (_thread.joinable()) _thread.join();
 	_tracks.clear();
 	SDL_DestroyAudioStream(_stream);
 	SDL_QuitSubSystem(SDL_INIT_AUDIO);
-} 
+
+	winmm.mciNotifyCd(MCI_NOTIFY_ABORTED);
+	winmm.mciNotifyClear();
+}
+
+auto CdPlayer::playing() const -> bool {
+	return !SDL_AudioStreamDevicePaused(_stream);
+}
 
 auto CdPlayer::playTrack(int track, bool loop) -> void { 
 	SDL_ClearAudioStream(_stream);
@@ -124,13 +132,16 @@ auto CdPlayer::playSectors(uint32_t start, uint32_t end, bool loop) -> void {
 }
 
 auto CdPlayer::stop() -> void { 
-	std::lock_guard<std::mutex> lock(_mutex); 
-	SDL_ClearAudioStream(_stream);
-	pause();
-	_currentByte = 0; 
-	_endByte = 0; 
-	_position = 0; 
-} 
+    std::lock_guard<std::mutex> lock(_mutex);
+    SDL_ClearAudioStream(_stream);
+    pause();
+    _currentByte = 0;
+    _endByte = 0;
+    _position = 0;
+
+    // Inform Winmm that playback was aborted (Winmm will only post if notify enabled)
+    winmm.mciNotifyCd(MCI_NOTIFY_ABORTED);
+}
 
 auto CdPlayer::pause() -> void { 
 	SDL_PauseAudioStreamDevice(_stream);
@@ -187,6 +198,7 @@ auto CdPlayer::playbackThread() -> void {
 				_position = currentTrack->startSector;
 				continue;
 			} else {
+				winmm.mciNotifyCd(MCI_NOTIFY_SUCCESSFUL);
 				pause();
 				continue;
 			}
@@ -194,7 +206,7 @@ auto CdPlayer::playbackThread() -> void {
 
 		auto toRead = static_cast<size_t>(std::min<uint64_t>(remaining, chunkSize));
 
-		std::ifstream file(currentTrack->filename, std::ios::binary);
+		auto file = std::ifstream(currentTrack->filename, std::ios::binary);
 		if (!file.is_open()) {
 			stop();
 			continue;

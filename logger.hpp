@@ -4,6 +4,7 @@
 #include <windows.h>
 #include <type_traits>
 #include <ddraw.h>
+#include <mciapi.h>
 
 #if _DEBUG
 
@@ -60,6 +61,55 @@ inline void log_value(const DDSURFACEDESC* ddsd)
     printf("caps=0x%08lX ", ddsd->ddsCaps.dwCaps);
 
     printf("bpp=%lu ", ddsd->ddpfPixelFormat.dwRGBBitCount);
+
+    printf("}");
+}
+
+inline void log_value(const MCI_OPEN_PARMSA* p)
+{
+    printf("MCI_OPEN_PARMSA{ ");
+    printf("dwCallback=");
+    log_value(p->dwCallback);
+    printf(" wDeviceID=%u ", p->wDeviceID);
+    printf("lpstrDeviceType=");
+    log_value(p->lpstrDeviceType);
+    printf(" lpstrElementName=");
+    log_value(p->lpstrElementName);
+    printf(" lpstrAlias=");
+    log_value(p->lpstrAlias);
+    printf("}");
+}
+
+inline void log_value(const MCI_SET_PARMS* p)
+{
+    printf("MCI_SET_PARMS{ ");
+    printf("dwCallback=");
+    log_value(p->dwCallback);
+    printf("}");
+}
+
+inline void log_value(const MCI_PLAY_PARMS* p)
+{
+    printf("MCI_PLAY_PARMS{ ");
+    printf("dwCallback=");
+    log_value(p->dwCallback);
+    printf(" dwFrom=%lu ", p->dwFrom);
+    printf(" dwTo=%lu ", p->dwTo);
+    printf("}");
+}
+
+inline void log_value(const MCI_STATUS_PARMS* p)
+{
+    printf("MCI_STATUS_PARMS{ ");
+    printf("dwCallback=");
+    log_value(p->dwCallback);
+    printf(" dwReturn=");
+    log_value(p->dwReturn);
+	printf(" dwItem=");
+	log_value(p->dwItem);
+	printf(" dwTrack=");
+	log_value(p->dwTrack);
+	
 
     printf("}");
 }

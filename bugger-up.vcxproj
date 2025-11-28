@@ -247,6 +247,7 @@
     <ClInclude Include="games\comix-zone.h" />
     <ClInclude Include="games\ecco.h" />
     <ClInclude Include="games\games.h" />
+    <ClInclude Include="games\panzer.h" />
     <ClInclude Include="gdi32\gdi32.hpp" />
     <ClInclude Include="logger.hpp" />
     <ClInclude Include="patch-engine.h" />

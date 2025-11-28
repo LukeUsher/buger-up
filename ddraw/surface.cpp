@@ -6,7 +6,14 @@
 #include "../logger.hpp"
 
 DirectDrawSurfaceImpl::~DirectDrawSurfaceImpl() {
-    if (_surface) SDL_DestroySurface(_surface);
+    if (_surface) {
+        if (_surface->flags & SDL_SURFACE_PREALLOCATED) {
+            free(_surface->pixels);
+        }
+
+        SDL_DestroySurface(_surface);
+		_surface = nullptr;
+    }
     if (isPrimary) directDraw._primarySurface = nullptr;
 }
 
@@ -66,15 +73,41 @@ auto DirectDrawSurfaceImpl::Create(LPDDSURFACEDESC desc, IDirectDrawSurface** ou
         directDraw._primarySurface->desc.dwWidth = directDraw._displayWidth;
         directDraw._primarySurface->desc.dwHeight = directDraw._displayHeight;
         directDraw._primarySurface->desc.ddpfPixelFormat.dwSize = sizeof(DDPIXELFORMAT);
-        directDraw._primarySurface->desc.ddpfPixelFormat.dwFlags = DDPF_RGB | DDPF_PALETTEINDEXED8; // TODO: Don't hardcode, use SetDisplayMode if it was called
-        directDraw._primarySurface->desc.ddpfPixelFormat.dwRGBBitCount = 8;
-        directDraw._primarySurface->desc.ddpfPixelFormat.dwRBitMask = 0;
-        directDraw._primarySurface->desc.ddpfPixelFormat.dwGBitMask = 0;
-        directDraw._primarySurface->desc.ddpfPixelFormat.dwBBitMask = 0;
-        directDraw._primarySurface->desc.ddpfPixelFormat.dwRGBAlphaBitMask = 0;
+
+        switch (directDraw._displayDepth) {
+            case 8:
+                directDraw._primarySurface->desc.ddpfPixelFormat.dwFlags = DDPF_RGB | DDPF_PALETTEINDEXED8;
+                directDraw._primarySurface->desc.ddpfPixelFormat.dwRGBBitCount = 8;
+                directDraw._primarySurface->desc.ddpfPixelFormat.dwRBitMask = 0;
+                directDraw._primarySurface->desc.ddpfPixelFormat.dwGBitMask = 0;
+                directDraw._primarySurface->desc.ddpfPixelFormat.dwBBitMask = 0;
+                directDraw._primarySurface->desc.ddpfPixelFormat.dwRGBAlphaBitMask = 0;
+                break;
+            case 16:
+                directDraw._primarySurface->desc.ddpfPixelFormat.dwFlags = DDPF_RGB ;
+                directDraw._primarySurface->desc.ddpfPixelFormat.dwRGBBitCount = 16;
+                directDraw._primarySurface->desc.ddpfPixelFormat.dwRBitMask = 0xF800;
+                directDraw._primarySurface->desc.ddpfPixelFormat.dwGBitMask = 0x07E0;
+                directDraw._primarySurface->desc.ddpfPixelFormat.dwBBitMask = 0x001F;
+                directDraw._primarySurface->desc.ddpfPixelFormat.dwRGBAlphaBitMask = 0;
+                break;
+            default:
+				delete directDraw._primarySurface;
+				TRACE_RETURN(DDERR_INVALIDPIXELFORMAT);
+
+        }
+
+        auto sdlFormat = SDL_PIXELFORMAT_INDEX8;
+        switch (directDraw._primarySurface->desc.ddpfPixelFormat.dwRGBBitCount) {
+            case 8:  sdlFormat = SDL_PIXELFORMAT_INDEX8; break;
+            case 16: sdlFormat = SDL_PIXELFORMAT_RGB565; break;
+            case 24: sdlFormat = SDL_PIXELFORMAT_RGB24;  break;
+            case 32: sdlFormat = SDL_PIXELFORMAT_ABGR8888; break;
+        }
+
         directDraw._primarySurface->desc.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE | DDSCAPS_VIDEOMEMORY | DDSCAPS_FRONTBUFFER;
 
-        directDraw._primarySurface->_surface = SDL_CreateSurface(directDraw._primarySurface->desc.dwWidth, directDraw._primarySurface->desc.dwHeight, SDL_PIXELFORMAT_INDEX8);
+        directDraw._primarySurface->_surface = SDL_CreateSurface(directDraw._primarySurface->desc.dwWidth, directDraw._primarySurface->desc.dwHeight, sdlFormat);
         if (!directDraw._primarySurface->_surface) {
             delete directDraw._primarySurface;
             TRACE_RETURN(DDERR_INVALIDPIXELFORMAT);
@@ -87,7 +120,7 @@ auto DirectDrawSurfaceImpl::Create(LPDDSURFACEDESC desc, IDirectDrawSurface** ou
         }
 
         bb->desc = directDraw._primarySurface->desc;
-        bb->_surface = SDL_CreateSurface(directDraw._primarySurface->desc.dwWidth, directDraw._primarySurface->desc.dwHeight, SDL_PIXELFORMAT_INDEX8);
+        bb->_surface = SDL_CreateSurface(directDraw._primarySurface->desc.dwWidth, directDraw._primarySurface->desc.dwHeight, sdlFormat);
         if (!bb->_surface) {
             delete bb;
             delete directDraw._primarySurface;
@@ -117,11 +150,9 @@ auto DirectDrawSurfaceImpl::Create(LPDDSURFACEDESC desc, IDirectDrawSurface** ou
     s->desc.dwFlags = DDSD_CAPS | DDSD_WIDTH | DDSD_HEIGHT | DDSD_PIXELFORMAT;
     s->desc.dwWidth = 1;
     s->desc.dwHeight = 1;
+    if(directDraw._primarySurface) s->desc.ddpfPixelFormat = directDraw._primarySurface->desc.ddpfPixelFormat;
     if (desc->dwFlags & DDSD_WIDTH) s->desc.dwWidth = desc->dwWidth;
     if (desc->dwFlags & DDSD_HEIGHT) s->desc.dwHeight = desc->dwHeight;
-    s->desc.ddpfPixelFormat.dwSize = sizeof(DDPIXELFORMAT);
-    s->desc.ddpfPixelFormat.dwFlags = DDPF_RGB | DDPF_PALETTEINDEXED8;
-    s->desc.ddpfPixelFormat.dwRGBBitCount = 8;
     if (desc->dwFlags & DDSD_PIXELFORMAT) s->desc.ddpfPixelFormat = desc->ddpfPixelFormat;
 
     auto sdlFormat = SDL_PIXELFORMAT_INDEX8;
@@ -141,8 +172,16 @@ auto DirectDrawSurfaceImpl::Create(LPDDSURFACEDESC desc, IDirectDrawSurface** ou
         else s->desc.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_VIDEOMEMORY;
     }
 
-    s->_surface = SDL_CreateSurface(s->desc.dwWidth, s->desc.dwHeight, sdlFormat);
+	auto pixelBuffer = malloc(s->desc.dwWidth * s->desc.dwHeight * (SDL_BYTESPERPIXEL(sdlFormat)));
+    if(!pixelBuffer) {
+        delete s;
+        TRACE_RETURN(DDERR_OUTOFMEMORY);
+	}
+
+	s->_surface = SDL_CreateSurfaceFrom(s->desc.dwWidth, s->desc.dwHeight, sdlFormat, pixelBuffer, s->desc.dwWidth * SDL_BYTESPERPIXEL(sdlFormat));
     if (!s->_surface) {
+		free(pixelBuffer);
+		delete s;
         TRACE_RETURN(DDERR_OUTOFMEMORY);
     }
 
@@ -471,9 +510,18 @@ auto DirectDrawSurfaceImpl::GetPalette(LPDIRECTDRAWPALETTE*) -> HRESULT {
     TRACE_RETURN(DDERR_UNSUPPORTED);
 }
 
-auto DirectDrawSurfaceImpl::GetPixelFormat(LPDDPIXELFORMAT) -> HRESULT {
-    TRACE_FUNCTION_ENTRY_STUB("ddraw");
-    TRACE_RETURN(DDERR_UNSUPPORTED);
+auto DirectDrawSurfaceImpl::GetPixelFormat(LPDDPIXELFORMAT pDDpf) -> HRESULT {
+    TRACE_FUNCTION_ENTRY("ddraw");
+	TRACE_IN_PARAM(pDDpf);
+
+    if (!pDDpf) {
+        TRACE_RETURN(DDERR_INVALIDPARAMS);
+    }
+
+	*pDDpf = desc.ddpfPixelFormat;
+    
+    TRACE_OUT_PARAM(pDDpf);
+    TRACE_RETURN(DD_OK);
 }
 
 auto DirectDrawSurfaceImpl::GetSurfaceDesc(LPDDSURFACEDESC lpDesc) -> HRESULT {

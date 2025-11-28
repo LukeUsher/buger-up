@@ -38,6 +38,7 @@ public:
     auto resume() -> void;
 
     auto position() const -> uint32_t;
+	auto playing() const -> bool;
 
     auto trackFromPosition(uint32_t position) -> int {
         for (size_t i = 0; i < _tracks.size(); i++) {

@@ -38,3 +38,4 @@ struct Game {
 #include "bug-too.h"
 #include "comix-zone.h"
 #include "ecco.h"
+#include "panzer.h"
